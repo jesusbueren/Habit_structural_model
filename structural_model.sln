@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.1321
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "structural_model", "structural_model.vfproj", "{54219FAB-DEA5-4A50-950C-664A7A8144F9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{54219FAB-DEA5-4A50-950C-664A7A8144F9}.Debug|x86.ActiveCfg = Debug|Win32
+		{54219FAB-DEA5-4A50-950C-664A7A8144F9}.Debug|x86.Build.0 = Debug|Win32
+		{54219FAB-DEA5-4A50-950C-664A7A8144F9}.Release|x86.ActiveCfg = Release|Win32
+		{54219FAB-DEA5-4A50-950C-664A7A8144F9}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7D1FC8C0-85FD-48C3-A7D4-DDE3F721C3DC}
+	EndGlobalSection
+EndGlobal
