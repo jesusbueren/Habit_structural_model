@@ -41,3 +41,35 @@ subroutine load_transitions_retirees()
         
 
 end subroutine
+    
+subroutine load_medical_retirees()
+    use nrtype;use var_first_step;use state_space_dim
+    implicit none
+    integer,parameter::K=8
+    real(DP),dimension(K+2)::data_csv
+    real(DP),dimension(K,1)::X,beta
+    real(DP)::rho,sigma2_u,age,pi_income,h,z
+    real(DP),dimension(G_nzz,1)::mag_p,pr0_p
+    integer::t_l,pi_l,h_l,z_l
+    
+    open(unit=9,file=path//'data\medical_exp.csv')
+            read(9,*) data_csv
+    close(9)
+    
+    beta(:,1)=data_csv(1:K)
+    rho=data_csv(K+1)
+    sigma2_u=data_csv(K+2)**2
+    
+    call discretize_shocks(rho,sigma2_u,G_nzz,mag_p,pr0_p,Pi_m)
+    
+    do t_l=T_R,T;do pi_l=1,G_PI;do h_l=1,G_h;do z_l=1,G_nzz
+        age=dble(first_age+(t_l-1)*2)
+        pi_income=PI_grid(pi_l)
+        h=dble(h_l-1)
+        z=mag_p(z_l,1)
+        X(:,1)=(/pi_income, pi_income**2.0d0, age, age**2.0d0,h,h*pi_income,pi_income*age,1.0d0/)
+        m_grid(pi_l,t_l,h_l,z_l)=exp(sum(X(:,1)*beta(:,1))+z)
+    end do;end do;end do;end do
+        
+
+end subroutine

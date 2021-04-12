@@ -25,6 +25,7 @@
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
 	<Files>
 		<Filter Name="Header Files" Filter="fi;fd;h;inc">
+		<File RelativePath=".\discretize_shock.f90"/>
 		<File RelativePath="..\metric_model\global_var.f90"/>
 		<File RelativePath=".\load_first_step_p.f90"/>
 		<File RelativePath=".\main.f90"/>
