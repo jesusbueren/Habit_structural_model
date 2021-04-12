@@ -24,7 +24,12 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
 	<Files>
-		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
+		<Filter Name="Header Files" Filter="fi;fd;h;inc">
+		<File RelativePath="..\metric_model\global_var.f90"/>
+		<File RelativePath=".\load_first_step_p.f90"/>
+		<File RelativePath=".\main.f90"/>
+		<File RelativePath=".\SM_global_var.f90"/>
+		<File RelativePath="..\metric_model\transitions.f90"/></Filter>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl"/></Files>
 	<Globals/></VisualStudioProject>
