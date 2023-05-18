@@ -26,6 +26,7 @@
 	<Files>
 		<Filter Name="Header Files" Filter="fi;fd;h;inc">
 		<File RelativePath=".\calibrate_b_bar.f90"/>
+		<File RelativePath=".\counterfactual.f90"/>
 		<File RelativePath=".\discretize_shock.f90"/>
 		<File RelativePath=".\load_first_step_p.f90"/>
 		<File RelativePath=".\main.f90"/>
@@ -33,7 +34,8 @@
 		<File RelativePath=".\SM_global_var.f90"/>
 		<File RelativePath=".\solve_and_simulate.f90"/>
 		<File RelativePath=".\solve_model.f90"/>
-		<File RelativePath="..\metric_model\transitions.f90"/></Filter>
+		<File RelativePath="..\metric_model\transitions.f90"/>
+		<File RelativePath=".\welfare_analysis.f90"/></Filter>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
 		<File RelativePath=".\amoeba.f90"/>
 		<File RelativePath="..\metric_model\global_var.f90"/>
