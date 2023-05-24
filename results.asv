@@ -151,12 +151,11 @@ for e_l=1:3
                 title('Bad health')
             end 
         end
-        set(gca,'FontName','Times New Roman','FontSize',FS);
-        set(gcf,'color','w')
     end
 end
-
-print('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\model_fit2','-depsc')
+set(gca,'FontName','Times New Roman','FontSize',FS);
+set(gcf,'color','w')
+print('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\model_fit','-depsc')
 
 
 

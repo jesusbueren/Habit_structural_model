@@ -293,14 +293,14 @@ end subroutine load_income_risk
 subroutine compute_pension()
     use nrtype;use state_space_dim;use var_first_step
         implicit none
-        integer,parameter::indv_sim=100000
+        integer,parameter::indv_sim_p=100000
         double precision::u
         integer::h,t_l,ind,i_l,y,e,h2,pi_l,df,ts_l,pi_l2,pi_old
         character::continue_k
         real(DP),dimension(T_R)::gross_earnings
         integer,dimension(G_PI)::counter
-        real(DP),dimension(indv_sim,G_PI)::pension
-        real(DP),dimension(indv_sim,T)::panel_income
+        real(DP),dimension(indv_sim_p,G_PI)::pension
+        real(DP),dimension(indv_sim_p,T)::panel_income
         integer,dimension(T)::counter_income,counter_bh
         integer,dimension(T_R)::counter_un
         real(DP),dimension(T,G_educ,G_types)::av_income_panel,std_income
@@ -317,7 +317,7 @@ subroutine compute_pension()
             counter_un=0
             counter_bh=0
             panel_income=-9
-            do i_l=1,indv_sim;gross_earnings=-9.0d0;aime=-9.0d0
+            do i_l=1,indv_sim_p;gross_earnings=-9.0d0;aime=-9.0d0
                 pi_old=-9
                 do t_l=1,T_R
                     if (t_l==1) then

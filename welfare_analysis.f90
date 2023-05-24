@@ -4,20 +4,25 @@ subroutine welfare_analysis()
     real(DP),dimension(G_nkk,T,G_h,G_PI,G_educ,G_types,G_DF)::a_policy
     real(DP),dimension(G_nkk,G_h,G_PI,G_educ,G_types,G_DF)::VSL
     real(DP),dimension(T,G_educ,G_types,4)::asset_distribution
-    real(DP),dimension(G_DF,G_educ,G_types)::av_VSL,av_V_ini,av_V_new
+    real(DP),dimension(G_educ)::av_VSL
+    real(DP),dimension(G_DF,G_educ,G_types)::av_V_ini,av_V_new
     integer::e,y,e_ref,y_ref,df_l
     real(DP)::lambda_max,lambda_min
     real(DP),dimension(G_educ,G_types)::lambda_c
+    real(DP),dimension(indv_sim,G_h,T)::panel_delta_assets
+    integer,dimension(G_h,T)::counter_h
+    real(DP),dimension(G_educ,G_h,T)::p50_delta
     INTERFACE
-        subroutine simulate_model(e,y,a_policy,VSL,asset_distribution,av_VSL,av_V_ini,lambda_ref)
+        subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta,lambda_ref)
             use nrtype;use state_space_dim;use var_first_step;use preference_p
             implicit none
-            integer,intent(in)::e,y
             real(DP),dimension(G_nkk,T,G_h,G_PI,G_educ,G_types,G_DF),intent(in)::a_policy
             real(DP),dimension(G_nkk,G_h,G_PI,G_educ,G_types,G_DF),intent(in)::VSL
-            real(DP),optional::lambda_ref
-            real(DP),dimension(T,4),intent(out)::asset_distribution
-            real(DP),dimension(G_DF),intent(out)::av_VSL,av_V_ini
+            real(DP),dimension(G_educ,G_types),optional::lambda_ref
+            real(DP),dimension(T,G_educ,G_types,4),intent(out)::asset_distribution
+            real(DP),dimension(G_DF,G_educ,G_types),intent(out)::av_V_ini
+            real(DP),dimension(G_educ),intent(out)::av_VSL
+            real(DP),dimension(G_educ,G_h,T),intent(out)::p50_delta
         END subroutine simulate_model
     end interface
     
@@ -45,10 +50,9 @@ subroutine welfare_analysis()
         read(9,*) a_policy,VSL
     close (9)
     
-    
-    do e=1,G_educ;do y=1,G_types
-        call simulate_model(e,y,a_policy,VSL,asset_distribution(:,e,y,:),av_VSL(:,e,y),av_V_ini(:,e,y)) !av_V_ini(1,3,:)
-    end do; end do
+
+    call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
+
     
     
     !0
@@ -62,7 +66,7 @@ subroutine welfare_analysis()
     
             1   lambda_c(e,y)=(lambda_max+lambda_min)/2
             
-                call simulate_model(e,y,a_policy,VSL,asset_distribution(:,e,y,:),av_VSL(:,e,y),av_V_new(:,e,y),lambda_c(e,y))
+                call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_new,p50_delta,lambda_c)
                 if (abs(av_V_new(df_l,e,y)-av_V_ini(df_l,e_ref,y_ref))/av_V_ini(df_l,e_ref,y_ref)>1d-5) then
                     if (av_V_new(df_l,e,y)>av_V_ini(df_l,e_ref,y_ref)) then
                         lambda_min=lambda_c(e,y)

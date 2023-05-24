@@ -36,11 +36,11 @@ program main
     
     !Calibrate model by matching wealth profile
     do p_l=1,PAR+1
-        p(p_l,:)=(/(betas_ini(:)-beta_min)/(beta_max-beta_min),beq_cur_ini,c_floor_ini,beq_mu_ini/) !,pr_betas_ini
+        p(p_l,:)=(/(betas_ini-beta_min)/(beta_max-beta_min),beq_cur_ini,c_floor_ini,beq_mu_ini,RRA_beq_ini/RRA/) !,pr_betas_ini 
         if (p_l>1) then
             p(p_l,p_l-1)=p(p_l,p_l-1)*0.8d0
         end if
-        p(p_l,:)=(/log(p(p_l,1)/(1.0d0-p(p_l,1))),log(p(p_l,2)),log(p(p_l,3)),log(p(p_l,4))/) !,log(p(p_l,6:14)/(1.0d0-p(p_l,6:14)))
+        p(p_l,:)=(/log(p(p_l,1)/(1.0d0-p(p_l,1))),log(p(p_l,2)),log(p(p_l,3)),log(p(p_l,4)),log(p(p_l,5)/(1.0d0-p(p_l,5)))/) !,log(p(p_l,6:14)/(1.0d0-p(p_l,6:14)))
         y(p_l)=obj_function(p(p_l,:))
     end do
     call amoeba(p,y,ftol,obj_function,iter)
@@ -70,18 +70,31 @@ function obj_function(parameters)
     real(DP),dimension(T,G_educ,G_types,4)::asset_distribution
     real(DP),dimension(G_DF,G_educ,G_types)::av_VSL,av_V_ini
     real(DP),dimension(9,generations,G_h,types,L_educ)::dist_assets_data
-    integer::y_l,t_l,e_l,h_l,t_ini,t_final
+    real(DP),dimension(G_educ,G_h,T)::p50_delta
+    integer::y_l,t_l,e_l,h_l,t_ini,t_final,t_l52
+    real(DP),dimension(G_educ,G_h,10)::delta_assets_data_MA
+    real(DP),dimension(G_educ,G_h,T)::delta_assets_data
     character::end_k
     
+    !Moments targetted
     open(unit=9,file=path//'metric_model\Results\wealth_moments_data.txt')
             read(9,*) dist_assets_data 
     close(9)
     dist_assets_data=dist_assets_data/1000.0d0
+    open(unit=9,file=path//'data\delta_assets.csv')
+            read(9,*) delta_assets_data_MA 
+    close(9)
+    delta_assets_data=-9.0d0
+    do t_l=1,10
+        t_l52=(52-first_age_sm)/2+1
+        delta_assets_data(:,:,t_l52+(t_l-1)*2)=delta_assets_data_MA(:,:,t_l) !delta_assets_data(3,1,:)
+    end do
 
     betas=1.0d0/(1.0d0 + exp(-parameters(1)))*(beta_max-beta_min)+ beta_min
     beq_cur=exp(parameters(2))
     c_floor=exp(parameters(3))
     beq_mu=exp(parameters(4))
+    RRA_beq=1.0d0/(1.0d0 + exp(-parameters(5)))*RRA
 
     !pr_betas=reshape(1.0d0/(1.0d0 + exp(-parameters(6:PAR))),shape(pr_betas) )
     
@@ -91,23 +104,30 @@ function obj_function(parameters)
     print('(A20,F10.2)'),"beq cur",beq_cur
     print('(A20,F10.2)'),"c floor",c_floor
     print('(A20,F10.2)'),"beq mu",beq_mu
+    print('(A20,F10.2)'),"RRA beq",RRA_beq
 
     print('(A20,<9>F6.3)'),"pr low beta",pr_betas
     
-    call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini)
+    call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)
     t_ini=5
     t_final=27
     
     obj_function=0.0d0
     do e_l=1,G_educ;do y_l=1,G_types        
-        obj_function=obj_function+sum(((asset_distribution(t_ini:t_final,e_l,y_l,1)-dist_assets_data(5,t_ini:t_final,1,y_l,e_l)))**2.0d0) & 
+        obj_function=obj_function +sum(((asset_distribution(t_ini:t_final,e_l,y_l,1)-dist_assets_data(5,t_ini:t_final,1,y_l,e_l)))**2.0d0) & 
                                  +sum(((asset_distribution(t_ini:t_final,e_l,y_l,2)-dist_assets_data(6,t_ini:t_final,1,y_l,e_l)))**2.0d0) & 
                                  +sum(((asset_distribution(t_ini:t_final,e_l,y_l,3)-dist_assets_data(7,t_ini:t_final,1,y_l,e_l)))**2.0d0)    
-        print('(I4,I4,<3>F20.2)'),e_l,y_l,sum(((asset_distribution(t_ini:t_final,e_l,y_l,1)-dist_assets_data(5,t_ini:t_final,1,y_l,e_l)))**2.0d0)/10.0d6, &
-                                     sum(((asset_distribution(t_ini:t_final,e_l,y_l,2)-dist_assets_data(6,t_ini:t_final,1,y_l,e_l)))**2.0d0)/10.0d6, &
-                                     sum(((asset_distribution(t_ini:t_final,e_l,y_l,3)-dist_assets_data(7,t_ini:t_final,1,y_l,e_l)))**2.0d0)/10.0d6
+        print('(I4,I4,<3>F20.2)'),e_l,y_l,sum(((asset_distribution(t_ini:t_final,e_l,y_l,1)-dist_assets_data(5,t_ini:t_final,1,y_l,e_l)))**2.0d0), &
+                                     sum(((asset_distribution(t_ini:t_final,e_l,y_l,2)-dist_assets_data(6,t_ini:t_final,1,y_l,e_l)))**2.0d0), &
+                                     sum(((asset_distribution(t_ini:t_final,e_l,y_l,3)-dist_assets_data(7,t_ini:t_final,1,y_l,e_l)))**2.0d0)
 
     end do;end do
+    
+    !do t_l=1,T
+    !    if (delta_assets_data(1,1,t_l)/=-9.0d0) then
+    !        obj_function=obj_function+sum((delta_assets_data(:,:,t_l)-p50_delta(:,:,t_l))**2.0d0)
+    !    end if
+    !end do
     
     
 
@@ -117,17 +137,20 @@ function obj_function(parameters)
     if (obj_function<best_obj_fct) then
         best_obj_fct=obj_function
         open(unit=9,file='asset_distribution_model.txt')
-        open(unit=10,file='asset_distribution_model_bh.txt')
+        open(unit=10,file='delta_assets_model_vs_data.txt')
             do e_l=1,G_educ;do y_l=1,G_types;do t_l=1,T
                 write(9,'(I4,I4,I4,<4>F20.8)'), t_l,e_l,y_l,asset_distribution(t_l,e_l,y_l,1),asset_distribution(t_l,e_l,y_l,2),asset_distribution(t_l,e_l,y_l,3),asset_distribution(t_l,e_l,y_l,4)
             end do;end do;end do
+            do e_l=1,G_educ;do t_l=1,T
+                write(10,'(I4,I4,<4>F20.8)'), t_l,e_l,p50_delta(e_l,1,t_l),p50_delta(e_l,2,t_l),delta_assets_data(e_l,1,t_l),delta_assets_data(e_l,2,t_l)
+            end do;end do
         close (9)
         close (10)
         open(unit=9,file='parameter.txt')
-            write(9,'(<PAR>F10.3,F20.5)'),betas,beq_cur,c_floor,beq_mu,pr_betas,obj_function
+            write(9,'(<PAR>F10.3,F20.5)'),betas,beq_cur,c_floor,beq_mu,RRA_beq,obj_function
         close (9)
     end if
-    !pause
+    pause
 
 end function  
     

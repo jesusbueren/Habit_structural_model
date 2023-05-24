@@ -5,7 +5,7 @@ module state_space_dim
     integer,parameter::T=(last_age_sm-first_age_sm+1)/2, T_R=(67-first_age_sm+1)/2, T_50=(50-first_age_sm+1)/2,T_svl=(age_svl-first_age_sm+1)/2 !T: Model periods, T_R: time at retirement, T_50: period at age 50
     integer,parameter::G_educ=3,G_PI=10,G_types=3,G_DF=1,G_h=2,G_cohorts=5 !G_educ: education levels,G_PI: pension income,G_types: health behavior types,G_DF: discount factors,G_h: health types
     integer,parameter::G_nzz=40,G_nkk=100 !G_nzz: grid for the persistent medical shock ; G_nkk: grid for assets  
-    
+    integer,parameter::indv_sim=20000
     real(DP)::tol=1.0d-11
 end module
     
@@ -39,8 +39,8 @@ module preference_p
     !initial guess of parameters
     real(DP),dimension(G_DF)::betas=-9.0d0,pr_betas_u
     real(DP),dimension(G_types,G_educ)::pr_betas=1.0d0
-    real(DP)::RRA=2.0d0,beq_cur=-9.0d0,c_floor=-9.0d0,beq_mu=-9.0d0,best_obj_fct=1.0d0/0.0d0,b_bar=3.55d0,delta_h=0.0d0,c_bar=0.0d0
-    integer,parameter::PAR=4
+    real(DP)::RRA=1.5d0,beq_cur=-9.0d0,c_floor=-9.0d0,beq_mu=-9.0d0,best_obj_fct=1.0d0/0.0d0,b_bar=3.55d0,delta_h=0.0d0,c_bar=0.0d0,RRA_beq=2.0d0
+    integer,parameter::PAR=5
     real(DP)::beta_max=1.0d0, beta_min=0.6d0
 end module
     
@@ -48,8 +48,8 @@ module initial_p
     use nrtype; use state_space_dim
     implicit none
     !initial guess of parameters
-    real(DP),dimension(G_DF)::betas_ini=0.95d0 !(/0.80d0,0.98d0/)
-    real(DP)::beq_cur_ini=145.818d0,c_floor_ini=3.9d0,beq_mu_ini=0.1d0 !0.838d0 !c_floor_ini=6.5d0,beq_mu_ini=0.05
+    real(DP),dimension(G_DF)::betas_ini=0.95d0 
+    real(DP)::beq_cur_ini=1.0d0 ,c_floor_ini=9.2d0,beq_mu_ini=8.0d0,RRA_beq_ini=0.5d0 
     real(DP),dimension(G_types,G_educ)::pr_betas_ini=1.0d0 !reshape((/0.497,	0.737,	0.664,	0.291,	0.613,	0.527,	0.097,	0.555,	0.514/),shape(pr_betas_ini))
 end module
     

@@ -1,12 +1,14 @@
 subroutine calibrate_b_bar()
     use nrtype; use preference_p; use global_var; use var_first_step
     implicit none
-    real(DP)::obj_function,av_VSL_do,b_bar_max,b_bar_min,VSL_data
+    real(DP)::obj_function,b_bar_max,b_bar_min,VSL_data
     real(DP),dimension(T,G_h,G_educ,G_types,4)::asset_distribution
-    real(DP),dimension(G_DF,G_educ,G_types)::av_VSL,av_V_ini
+    real(DP),dimension(G_educ)::av_VSL
+    real(DP),dimension(G_DF,G_educ,G_types)::av_V_ini
     real(DP),dimension(G_df,G_educ,G_types)::joint_pr,cost_ey
     real(DP),dimension(G_df)::k
     real(DP),dimension(8,generations,types,L_educ)::dist_assets_data
+    real(DP),dimension(G_educ,G_h,T)::p50_delta
     integer::y_l,t_l,e_l,it,df_l
     character::end_k
     
@@ -31,7 +33,6 @@ subroutine calibrate_b_bar()
     
     b_bar_min=0.0d0
     b_bar_max=5.0d0
-    av_VSL_do=-9.0d0
     it=0
     
     VSL_data=6000.0d0
@@ -39,24 +40,14 @@ subroutine calibrate_b_bar()
     !do while (abs(av_VSL_do-VSL_data)>100.0d0 .and. it<10) 
         b_bar=0.05d0!(b_bar_max+b_bar_min)/2.0d0
         !Solve model
-        call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini)
-        
-        !Av VSL for HS dropouts
-        av_VSL_do=0.0d0
-        do df_l=1,G_DF;do y_l=1,types; e_l=1
-            if (df_l==1) then
-                av_VSL_do=av_VSL_do+av_VSL(df_l,e_l,y_l)*pr_betas(y_l,e_l)*fraction_types(e_l,y_l)
-            else
-                av_VSL_do=av_VSL_do+av_VSL(df_l,e_l,y_l)*(1.0d0-pr_betas(y_l,e_l))*fraction_types(e_l,y_l)
-            end if
-        end do;end do
-        if (av_VSL_do>VSL_data) then
+        call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)
+        if (av_VSL(1)>VSL_data) then
             b_bar_max=b_bar
         else
             b_bar_min=b_bar
         end if
         it=it+1
-        print*,it,b_bar,av_VSL_do
+        print*,it,b_bar,av_VSL(1)
     !end do
     
     !Estimate costs:

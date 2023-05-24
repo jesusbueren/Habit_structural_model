@@ -104,7 +104,7 @@ subroutine solve_model(a_policy,VSL)
                 else
                     V_x2(a_l2)=u_fct(x_policy(a_l2)-a_grid(a_l2),n_bar(t_l),h_l,y_l)+betas(df_l)*ExpConVal(a_grid(a_l2),V(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l)!(1.0d0-betas(y_l))*
                 end if
-                u_md(a_l2)=u_fct(x_policy(a_l2),n_bar(t_l),h_l,y_l)+betas(df_l)*ExpConVal(0.0d0,V(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l) !(1.0d0-betas(y_l))*
+                u_md(a_l2)=u_fct(x_policy(a_l2),n_bar(t_l),h_l,y_l)+betas(df_l)*ExpConVal(0.0d0,V(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l) 
                 if (u_md(a_l2)>V_x2(a_l2) .or. dV_x2(a_l2)==0.0d0) then
                     discard_points(a_l2)=1
                     a_l1=a_l2+1
@@ -115,8 +115,7 @@ subroutine solve_model(a_policy,VSL)
                 end if; end if
             end do
             x_policy_new=x_policy
-            
-            
+
             !Discard non-optimal points
             if (jumps>0) then
                 a_l2=a_l1+1  
@@ -192,8 +191,8 @@ subroutine solve_model(a_policy,VSL)
             end if
             
             if (sum(discard_points)>150)then
-                go to 2
                 print*,'suspicious'
+                go to 2
             end if
             
 
@@ -203,7 +202,7 @@ subroutine solve_model(a_policy,VSL)
             do x_l=1,G_nkk
                 if (a_grid(x_l)<=x_policy_s(1)) then
                     a_policy(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)=0.0d0
-                    V(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)=u_fct(max(a_grid(x_l),c_floor),n_bar(t_l),h_l,y_l)+betas(df_l)*ExpConVal(0.0d0,V(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l) !(1.0d0-betas(y_l))*
+                    V(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)=u_fct(a_grid(x_l)+0.000001d0,n_bar(t_l),h_l,y_l)+betas(df_l)*ExpConVal(0.0d0,V(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l) 
                 else
                     a_policy(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)=-9.0d0 
                     do while (a_policy(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)==-9.0d0)
@@ -257,8 +256,8 @@ FUNCTION beq_fct (a)
         implicit none
             REAL(DP):: beq_fct
             REAL(DP), INTENT(IN) :: a
-            if (RRA/=1.0d0) then
-                beq_fct=beq_mu**(-RRA)*(a+beq_cur)**(1.0d0-RRA)/(1.0d0-RRA)
+            if (RRA_beq/=1.0d0) then
+                beq_fct=beq_mu**(-RRA)*(a+beq_cur)**(1.0d0-RRA_beq)/(1.0d0-RRA_beq)
             else
                 beq_fct=beq_mu**(-RRA)*log(a+beq_cur)
             end if
@@ -312,7 +311,7 @@ FUNCTION ExpConVal (a,FV,t_l,h_l,pi_l,e_l,y_l)
                         sum=sum+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)
                     else
                         alpha=(cash_on_hand-a_grid(G_nkk-1))/step
-                        ExpConVal=ExpConVal+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*FV(G_nkk,h_l2,pi_l2) !((FV(G_nkk,h_l2,pi_l2)-FV(G_nkk-1,h_l2,pi_l2))*alpha+FV(G_nkk-1,h_l2,pi_l2)) 
+                        ExpConVal=ExpConVal+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*((FV(G_nkk,h_l2,pi_l2)-FV(G_nkk-1,h_l2,pi_l2))*alpha+FV(G_nkk-1,h_l2,pi_l2))
                     end if  
                  end do;end do;end do;end do
             end if
@@ -373,14 +372,14 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
                                     pause
                                 end if
                             elseif (loc_coh<G_nkk) then
-                                if (loc_coh==1) then
-                                    a2=FSavings(loc_coh,h_l2,pi_l)
-                                    ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
-                                else
+                                !if (loc_coh==1) then
+                                !    a2=FSavings(loc_coh,h_l2,pi_l)
+                                !    ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
+                                !else
                                     alpha=(cash_on_hand-a_grid(loc_coh))/step
                                     a2=(FSavings(loc_coh+1,h_l2,pi_l)-FSavings(loc_coh,h_l2,pi_l))*alpha+FSavings(loc_coh,h_l2,pi_l) 
                                     ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
-                                end if                                    
+                                !end if                                    
                                 if (ExpMarginalUtility<0.0d0) then
                                     print*,marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2),cash_on_hand,cash_on_hand-a2
                                     pause
@@ -388,8 +387,7 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
                                 non_zero_mu=non_zero_mu+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
                             else
                                 alpha=(FSavings(G_nkk,h_l2,pi_l)-FSavings(G_nkk-1,h_l2,pi_l))/(a_grid(G_nkk)-a_grid(G_nkk-1))
-                                const=FSavings(G_nkk-1,h_l2,pi_l)-alpha*a_grid(G_nkk-1)
-                                a2=alpha*cash_on_hand+const
+                                a2=(FSavings(G_nkk,h_l2,pi_l)-FSavings(G_nkk-1,h_l2,pi_l))*alpha+FSavings(G_nkk-1,h_l2,pi_l)
                                 ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2) 
                                 if (ExpMarginalUtility<0.0d0) then
                                     print*,marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2),cash_on_hand,cash_on_hand-a2
@@ -399,7 +397,9 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
                             end if 
                         else
                             cash_on_hand=max((1.0d0+r)*a+PI_grid(pi_l,e_l,y_l)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),0.0d0)
-                            ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*marginal_beq_fct(cash_on_hand)
+                            if (cash_on_hand>0.0d0) then
+                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*marginal_beq_fct(cash_on_hand)
+                            end if
                         end if
                     end do;end do
             else
@@ -416,14 +416,14 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
                                     pause
                                 end if
                             elseif (loc_coh<G_nkk) then
-                                if (loc_coh==1) then
-                                    a2=FSavings(loc_coh,h_l2,pi_l2)
-                                    ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
-                                else
+                                !if (loc_coh==1) then
+                                !    a2=FSavings(loc_coh,h_l2,pi_l2)
+                                !    ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
+                                !else
                                     alpha=(cash_on_hand-a_grid(loc_coh))/step 
                                     a2=(FSavings(loc_coh+1,h_l2,pi_l2)-FSavings(loc_coh,h_l2,pi_l2))*alpha+FSavings(loc_coh,h_l2,pi_l2)
                                     ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
-                                end if
+                                !end if
                                 if (ExpMarginalUtility<0.0d0) then
                                     print*,marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2),cash_on_hand,cash_on_hand-a2
                                     pause
@@ -431,8 +431,7 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
                                 non_zero_mu=non_zero_mu+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
                             else
                                 alpha=(FSavings(G_nkk,h_l2,pi_l2)-FSavings(G_nkk-1,h_l2,pi_l2))/(a_grid(G_nkk)-a_grid(G_nkk-1))
-                                const=FSavings(G_nkk-1,h_l2,pi_l2)-alpha*a_grid(G_nkk-1)
-                                a2=alpha*cash_on_hand+const
+                                a2=(FSavings(G_nkk,h_l2,pi_l2)-FSavings(G_nkk-1,h_l2,pi_l2))*alpha+FSavings(G_nkk-1,h_l2,pi_l2)
                                 ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
                                 if (ExpMarginalUtility<0.0d0) then
                                     print*,marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2),cash_on_hand,cash_on_hand-a2
@@ -442,7 +441,9 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
                             end if 
                         else
                             cash_on_hand=max((1.0d0+r)*a+income_grid(y_l,e_l,t_l,min(h_l2,G_h),pi_l2,ts_l2)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),0.0d0)
-                            ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_beq_fct(cash_on_hand)
+                            if (cash_on_hand>0.0d0) then
+                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_beq_fct(cash_on_hand)
+                            end if
                         end if
                    end do;end do;end do; end do
             end if   
@@ -454,7 +455,7 @@ FUNCTION marginal_beq_fct (a)
         implicit none
             REAL(DP):: marginal_beq_fct
             REAL(DP), INTENT(IN) :: a
-            marginal_beq_fct=beq_mu**(-RRA)*(a+beq_cur)**(-RRA)
+            marginal_beq_fct=beq_mu**(-RRA)*(a+beq_cur)**(-RRA_beq)
 END FUNCTION marginal_beq_fct
     
     
@@ -512,7 +513,7 @@ FUNCTION value_of_stat_life (a_today,a_prime,FV,t_l,h_l,pi_l,e_l,y_l,df_l)
                         if (h_l2<G_h+1) then
                             ExpConVal_alive=ExpConVal_alive+H_sm(h_l,h_l2,t_l,y_l,e_l)/(1.0d0-H_sm(h_l,G_h+1,t_l,y_l,e_l))*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*FV(G_nkk,h_l2,pi_l2)
                         else
-                            ExpConVal_dead=ExpConVal_dead+pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*FV(G_nkk,h_l2,pi_l2)
+                            ExpConVal_dead=ExpConVal_dead+pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*((FV(G_nkk,h_l2,pi_l2)-FV(G_nkk-1,h_l2,pi_l2))*alpha+FV(G_nkk-1,h_l2,pi_l2))
                         end if
                     end if  
             end do;end do;end do;end do
