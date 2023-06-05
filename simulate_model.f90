@@ -43,7 +43,7 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
     END INTERFACE
     
     lambda_c=0.0d0
-    V_i=0.0d0
+
     if(present(lambda_ref))lambda_c=lambda_ref
     
     
@@ -60,7 +60,7 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
         med_exp=-9.0d0
         unemployed=0.0d0
         VSL_i=0.0d0
-        
+        V_i=0.0d0
         av_c=0.0d0
 
     
@@ -219,7 +219,7 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
         
                 !If dead go to next individual
                 if (h==G_h+1) then
-                    V_i(df,y,counter(1,y,df))=V_i(df,y,counter(1,y,df))+betas(df)**t_l*beq_fct(max(cash_on_hand,0.0d0)*(1.0d0-lambda_c(e,y)))!
+                    !V_i(df,y,counter(1,y,df))=V_i(df,y,counter(1,y,df))+betas(df)**t_l*beq_fct(max(cash_on_hand,0.0d0)*(1.0d0-lambda_c(e,y)))!
                     if (isnan(V_i(df,y,counter(1,y,df)))) then
                         print*,''
                     end if
@@ -228,7 +228,7 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                     cash_on_hand=max(cash_on_hand,c_floor)
                     counter(t_l,y,df)=counter(t_l,y,df)+1
                     counter_y(t_l,y)=sum(counter(t_l,y,:))
-                    counter_df=sum(counter(t_l,:,df))
+                    counter_df(t_l,df)=sum(counter(t_l,:,df))
 
                     !Simulate savings decisions
                     loc_coh=max(min(int(cash_on_hand/step)+1,G_nkk),1) 
@@ -248,7 +248,7 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                         panel_delta_assets(counter_h(lag_h,t_l),lag_h,t_l)=savings-lag_savings
                     end if
 
-                    V_i(df,y,counter(1,y,df))=V_i(df,y,counter(1,y,df))+betas(df)**(t_l-1)*(1.0d0-betas(df))*u_fct((cash_on_hand-savings)*(1.0d0-lambda_c(e,y)),n_bar(t_l),h,y)
+                    V_i(df,y,counter(1,y,df))=V_i(df,y,counter(1,y,df))+betas(df)**(t_l-1)*u_fct((cash_on_hand-savings)*(1.0d0-lambda_c(e,y)),n_bar(t_l),h,y)
                     if (isnan(V_i(df,y,counter(1,y,df)))) then
                         print*,''
                     end if
@@ -289,7 +289,7 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
             if (t_l==1) then
                 do df=1,G_DF
                     if (counter_df(t_l,df)>0) then
-                        av_V_ini(df,e,y)=sum(V_i(df,y,:))/dble(counter(1,y,df))!counter_surv_df(1,:)
+                        av_V_ini(df,e,y)=sum(V_i(df,y,:))/dble(counter(1,y,df))!counter(1,:,:)
                     else
                         av_V_ini(df,e,y)=-9.0d0
                     end if
@@ -306,8 +306,11 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                    ! print*,'e=',e,';y=',y,';VSL=',av_VSL(df)
                 end do
             end if 
-            !print*,t_l,sum(med_exp(1:counter_surv(t_l),t_l))/counter_surv(t_l), sqrt(sum((med_exp(1:counter_surv(t_l),t_l)-sum(med_exp(1:counter_surv(t_l),t_l))/counter_surv(t_l))**2.0d0)/counter_surv(t_l))
+            
         end do;end do
+        !do t_l=1,T
+        !    print*,e,t_l,sum(med_exp(1:sum(counter(t_l,:,:)),t_l))/sum(counter(t_l,:,:)), sqrt(sum((med_exp(1:sum(counter(t_l,:,:)),t_l)-sum(med_exp(1:sum(counter(t_l,:,:)),t_l))/sum(counter(t_l,:,:)))**2.0d0)/sum(counter(t_l,:,:)))
+        !end do
     end do
     
 

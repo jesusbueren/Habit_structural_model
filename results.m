@@ -32,18 +32,22 @@ lw=[1.5 1.5 2.5]
 FS=10
 sz=30
 h_l=1
+ini_age=26
+fin_age=72
+last=size(ini_age:2:fin_age,2)
+
 figure(1)
 set(1,'position',[150    150    750    400]) %get(0, 'Screensize')
 for y_l=1:type_y
 for e_l=1:type_e
     h((e_l-1)*3+y_l)=subplot(3,3,(e_l-1)*3+y_l)
-    plot(26:2:80,model(4,1:28,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{1})
+    plot(ini_age:2:fin_age,model(4,1:last,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{1})
     hold on
-    plot(26:2:80,model(5,1:28,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{2},'HandleVisibility','off')
-    plot(26:2:80,model(6,1:28,y_l,e_l,h_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{1},'HandleVisibility','off')
-    scatter(26:4:80,data(5,1:2:28,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','s')
-    scatter(26:4:80,data(6,1:2:28,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','d','HandleVisibility','off')
-    scatter(26:4:80,data(7,1:2:28,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','s','HandleVisibility','off')
+    plot(ini_age:2:fin_age,model(5,1:last,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{2},'HandleVisibility','off')
+    plot(ini_age:2:fin_age,model(6,1:last,y_l,e_l,h_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{1},'HandleVisibility','off')
+    scatter(ini_age:4:fin_age,data(5,1:2:last,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','s')
+    scatter(ini_age:4:fin_age,data(6,1:2:last,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','d','HandleVisibility','off')
+    scatter(ini_age:4:fin_age,data(7,1:2:last,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','s','HandleVisibility','off')
     if e_l==1 && y_l==1
         title('Protective')
 %         ylim([0 150])
@@ -73,6 +77,7 @@ for e_l=1:type_e
         ylim([0 1800])
         yticks(0:500:1800)
     end
+    xlim([ini_age-1 fin_age+1])
     set(gca,'FontName','Times New Roman','FontSize',FS);
     set(gcf,'color','w')
 end
@@ -231,7 +236,7 @@ set(gca,'FontName','Times New Roman','FontSize',FS);
 if j==1
 %     ylim([-1.5,1.5])
 elseif j==2
-   ylim([min(data_mat(:,:,df_l,j),[],'all')-0.0005,max(data_mat(:,:,df_l,j),[],'all')+0.0005])
+   ylim([min(data_mat(:,:,df_l,j),[],'all')-5,max(data_mat(:,:,df_l,j),[],'all')+5])
 elseif j==3
     ylim([0,1])
 end

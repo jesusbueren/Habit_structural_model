@@ -97,56 +97,46 @@ end subroutine
 subroutine load_medical_expenses()
     use nrtype;use var_first_step;use state_space_dim; use global_var
     implicit none
-    integer,parameter::K=15
-    real(DP),dimension(K+1)::data_csv
-    real(DP),dimension(K,1)::X,beta
-    real(DP)::sigma2_u,age,h,z,d1,d2,d3
+    integer,parameter::K=14
+    real(DP),dimension(14*2)::data_csv
+    real(DP),dimension(K,1)::X,beta,beta_var
+    real(DP)::age,h,z,d1,d2,d3
     real(DP),dimension(G_nzz,1)::mag_p
     real(DP),dimension(K)::beta_insurance_u65,beta_insurance_o65
     real(DP),dimension(G_educ,T,G_h)::fraction_covered!Medical grid
     integer::t_l,e_l,h_l,z_l
+    real(DP),dimension(2)::h_d
+    real(DP),dimension(3)::e_d
+    real(DP),dimension(G_educ,T,G_h)::sigma2_u
     character::pause_k
     
     open(unit=9,file=path//'data\medical_exp.csv')
             read(9,*) data_csv
     close(9)
-    open(unit=9,file=path//'data\insurance_u65.csv')
-            read(9,*) beta_insurance_u65
-    close(9)
-    open(unit=9,file=path//'data\insurance_o65.csv')
-            read(9,*) beta_insurance_o65
-    close(9)
+
     
     beta(:,1)=data_csv(1:K)
-    sigma2_u=data_csv(K+1)**2
+    beta_var(:,1)=data_csv(K+1:2*K)
     
-    !call discretize_shocks(0.0d0,sigma2_u,G_nzz,mag_p,pr0_p,Pi_m)
-    call discretize_iid_shocks(sigma2_u,G_nzz,mag_p,pr0_p)
-    
+
     !Mean expenses from stata regression
-    do e_l=1,G_educ;do h_l=1,G_h;do z_l=1,G_nzz;do t_l=1,T
-        age=dble(first_age_sm+(t_l-1)*2)!min(dble(first_age_sm+(t_l-1)*2),80.0d0)
-        d1=0.0d0
-        d2=0.0d0
-        d3=0.0d0
-        if (e_l==1) then
-            d1=1.0d0
-        elseif (e_l==2) then
-            d2=1.0d0
-        elseif (e_l==3) then
-            d3=1.0d0
-        end if
-        h=dble(h_l-1)
-        z=mag_p(z_l,1)
-        X(:,1)=(/d1,d2,d3,age,age**2.0d0,age**3.0d0,h,d1*h,d2*h,d3*h,d1*age,d2*age,d3*age,h*age,1.0d0/)
-        m_grid(e_l,t_l,h_l,z_l)=exp(sum(X(:,1)*beta(:,1))+z)
-        if (age<65) then
-            fraction_covered(e_l,t_l,h_l)=1-sum(X(:,1)*beta_insurance_u65)
-        else
-            fraction_covered(e_l,t_l,h_l)=1-sum(X(:,1)*beta_insurance_o65)
-        end if
-        m_grid(e_l,t_l,h_l,z_l)=m_grid(e_l,t_l,h_l,z_l)!*(1-fraction_covered(e_l,t_l,h_l))
-    end do;end do;end do;end do
+    m_grid=0.0d0
+    do e_l=1,G_educ;do h_l=1,G_h;do t_l=T_50,T
+        !Set covariates
+        age=dble(first_age_sm+(t_l-1)*2)
+        e_d=0.0d0
+        e_d(e_l)=1.0d0
+        h_d=0.0d0
+        h_d(h_l)=1.0d0
+        X(:,1)=(/age,age**2.0d0,age**3.0d0,h_d,h_d*age,e_d*age,e_d,1.0d0/)
+        !set variance
+        sigma2_u(e_l,t_l,h_l)=sum(X(:,1)*beta_var(:,1))
+        call discretize_iid_shocks(sigma2_u(e_l,t_l,h_l),G_nzz,mag_p,pr0_p)
+        do z_l=1,G_nzz
+            z=mag_p(z_l,1)
+            m_grid(e_l,t_l,h_l,z_l)=exp(sum(X(:,1)*beta(:,1))+z)
+        end do
+    end do;end do;end do
 
 end subroutine
     
@@ -273,7 +263,7 @@ subroutine load_income_risk()
             gross_annual_income=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0
             gross_annual_income2(y_l,e_l,t_l,h_l,z_l,z_l2)=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0
             taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=min(gross_annual_income,ss_bar)*2.0d0
-            income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau)*2.0d0 - tau_mcr*gross_annual_income*2.0d0-tau_ss*min(gross_annual_income,ss_bar)*2.0d0       
+            income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=(av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau) - tau_mcr*gross_annual_income-tau_ss*min(gross_annual_income,ss_bar))*2.0d0
             income_tax(y_l,e_l,t_l,h_l,z_l,z_l2)=gross_annual_income*2.0d0-av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau)*2.0d0
         else
             income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
@@ -423,9 +413,11 @@ subroutine compute_pension()
                     if (h==G_h+1) then
                         exit
                     end if
-            
-                    counter_income(t_l)=counter_income(t_l)+1
-                    panel_income(counter_income(t_l),t_l)=income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l)
+                    
+                    if (income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l)>0.0d0 .and. h==2) then
+                        counter_income(t_l)=counter_income(t_l)+1
+                        panel_income(counter_income(t_l),t_l)=log(income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l)*1000.0d0/2.0d0)
+                    end if
             
                     if (t_l<=T_R) then
                         if (h==1 .and. pi_old<G_PI .and. pi_old>0) then
@@ -474,7 +466,7 @@ subroutine compute_pension()
                 end if             
             end do
         end do;end do
-
+!av_income_panel(:,2,1)
 end subroutine  
 
     

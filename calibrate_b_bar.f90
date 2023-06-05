@@ -13,7 +13,7 @@ subroutine calibrate_b_bar()
     character::end_k
     
     open(unit=9,file='parameter.txt')
-        read(9,*) betas,beq_cur,c_floor,beq_mu,pr_betas,obj_function
+        read(9,*) betas,c_floor,pr_betas,obj_function
     close (9)
  
     
@@ -32,13 +32,15 @@ subroutine calibrate_b_bar()
     end if
     
     b_bar_min=0.0d0
-    b_bar_max=5.0d0
+    b_bar_max=30.0d0
     it=0
     
-    VSL_data=6000.0d0
+    VSL_data=2000.0d0
     
-    !do while (abs(av_VSL_do-VSL_data)>100.0d0 .and. it<10) 
-        b_bar=0.05d0!(b_bar_max+b_bar_min)/2.0d0
+    
+    
+    do while (abs(av_VSL(1)-VSL_data)>100.0d0 .and. it<10) 
+        b_bar=(b_bar_max+b_bar_min)/2.0d0
         !Solve model
         call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)
         if (av_VSL(1)>VSL_data) then
@@ -48,7 +50,7 @@ subroutine calibrate_b_bar()
         end if
         it=it+1
         print*,it,b_bar,av_VSL(1)
-    !end do
+    end do
     
     !Estimate costs:
     !!!!!!!!!!!!!!!!    
