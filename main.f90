@@ -35,16 +35,16 @@ program main
     call load_first_step_p()
     
     !Calibrate model by matching wealth profile
-    !do p_l=1,PAR+1
-    !    p(p_l,:)=(/(betas_ini-beta_min)/(beta_max-beta_min),beq_cur_ini,c_floor_ini,beq_mu_ini,pr_betas_ini/) !
-    !    if (p_l>1) then
-    !        p(p_l,p_l-1)=p(p_l,p_l-1)*0.95d0
-    !    end if
-    !    p(p_l,:)=(/log(p(p_l,1:2)/(1.0d0-p(p_l,1:2))),log(p(p_l,3)),log(p(p_l,4)),log(p(p_l,5)),log(p(p_l,6:PAR)/(1.0d0-p(p_l,6:PAR)))/) 
-    !    !p(p_l,:)=(/log(p(p_l,1)/(1.0d0-p(p_l,1))),log(p(p_l,2)),log(p(p_l,3)),log(p(p_l,4))/) 
-    !    y(p_l)=obj_function(p(p_l,:))
-    !end do
-    !call amoeba(p,y,ftol,obj_function,iter)
+    do p_l=1,PAR+1
+        p(p_l,:)=(/(betas_ini-beta_min)/(beta_max-beta_min),beq_cur_ini,c_floor_ini,beq_mu_ini,pr_betas_ini/) !
+        if (p_l>1) then
+            p(p_l,p_l-1)=p(p_l,p_l-1)*0.95d0
+        end if
+        p(p_l,:)=(/log(p(p_l,1:2)/(1.0d0-p(p_l,1:2))),log(p(p_l,3)),log(p(p_l,4)),log(p(p_l,5)),log(p(p_l,6:PAR)/(1.0d0-p(p_l,6:PAR)))/) 
+        !p(p_l,:)=(/log(p(p_l,1)/(1.0d0-p(p_l,1))),log(p(p_l,2)),log(p(p_l,3)),log(p(p_l,4))/) 
+        y(p_l)=obj_function(p(p_l,:))
+    end do
+    call amoeba(p,y,ftol,obj_function,iter)
     
     !Calibrate b_bar to match the value statistical life of 4,000,000 for the average dropout
     !call calibrate_b_bar()
@@ -145,7 +145,7 @@ function obj_function(parameters)
             write(9,'(<PAR>F10.3,F20.5)'),betas,c_floor,beq_cur,beq_mu,pr_betas,obj_function
         close (9)
     end if
-    !pause
+    pause
 
 end function  
     

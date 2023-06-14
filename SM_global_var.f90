@@ -51,8 +51,8 @@ module initial_p
     implicit none
     !initial guess of parameters
     real(DP),dimension(G_DF)::betas_ini=(/0.67d0,0.89d0/)
-    real(DP)::beq_cur_ini=345.3d0 ,c_floor_ini=3.15d0,beq_mu_ini=2415.0d0
-    real(DP),dimension(G_types,G_educ)::pr_betas_ini=reshape((/0.452,0.58,0.79,0.30,0.54,0.7,0.21,0.68,0.88/),shape(pr_betas_ini))
+    real(DP)::beq_cur_ini=264.3d0 ,c_floor_ini=2.9d0,beq_mu_ini=2049.850d0
+    real(DP),dimension(G_types,G_educ)::pr_betas_ini=reshape((/0.481,	0.618,	0.835,	0.385,	0.568,	0.804,	0.168,	0.666,	0.936/),shape(pr_betas_ini))
 end module
     
 
