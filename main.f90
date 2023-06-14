@@ -35,22 +35,23 @@ program main
     call load_first_step_p()
     
     !Calibrate model by matching wealth profile
-    do p_l=1,PAR+1
-        p(p_l,:)=(/(betas_ini-beta_min)/(beta_max-beta_min),beq_cur_ini,c_floor_ini,beq_mu_ini,RRA_ini/) 
-        if (p_l>1) then
-            p(p_l,p_l-1)=p(p_l,p_l-1)*0.8d0
-        end if
-        p(p_l,:)=(/log(p(p_l,1)/(1.0d0-p(p_l,1))),log(p(p_l,2)),log(p(p_l,3)),log(p(p_l,4)),log(p(p_l,5))/) !log(p(p_l,4:PAR)/(1.0d0-p(p_l,4:PAR)))
-        y(p_l)=obj_function(p(p_l,:))
-    end do
-    call amoeba(p,y,ftol,obj_function,iter)
+    !do p_l=1,PAR+1
+    !    p(p_l,:)=(/(betas_ini-beta_min)/(beta_max-beta_min),beq_cur_ini,c_floor_ini,beq_mu_ini,pr_betas_ini/) !
+    !    if (p_l>1) then
+    !        p(p_l,p_l-1)=p(p_l,p_l-1)*0.95d0
+    !    end if
+    !    p(p_l,:)=(/log(p(p_l,1:2)/(1.0d0-p(p_l,1:2))),log(p(p_l,3)),log(p(p_l,4)),log(p(p_l,5)),log(p(p_l,6:PAR)/(1.0d0-p(p_l,6:PAR)))/) 
+    !    !p(p_l,:)=(/log(p(p_l,1)/(1.0d0-p(p_l,1))),log(p(p_l,2)),log(p(p_l,3)),log(p(p_l,4))/) 
+    !    y(p_l)=obj_function(p(p_l,:))
+    !end do
+    !call amoeba(p,y,ftol,obj_function,iter)
     
     !Calibrate b_bar to match the value statistical life of 4,000,000 for the average dropout
-    call calibrate_b_bar()
+    !call calibrate_b_bar()
     
     
     !call welfare_analysis()
-    !call counterfactuals()
+    call counterfactuals()
     
     
     
@@ -66,7 +67,7 @@ function obj_function(parameters)
     use nrtype; use preference_p; use global_var
     implicit none
     real(DP),dimension(:),intent(in)::parameters
-    real(DP)::obj_function,obj_function2
+    real(DP)::obj_function
     real(DP),dimension(T,G_educ,G_types,4)::asset_distribution
     real(DP),dimension(G_DF,G_educ,G_types)::av_VSL,av_V_ini
     real(DP),dimension(9,generations,G_h,types,L_educ)::dist_assets_data
@@ -91,12 +92,11 @@ function obj_function(parameters)
         delta_assets_data(:,:,t_l52+(t_l-1)*2)=delta_assets_data_MA(:,:,t_l) !delta_assets_data(3,1,:)
     end do
 
-    betas=1.0d0/(1.0d0 + exp(-parameters(1)))*(beta_max-beta_min)+ beta_min
-    beq_cur=exp(parameters(2))
-    c_floor=exp(parameters(3))
-    beq_mu=exp(parameters(4))
-    RRA=exp(parameters(5))
-    !pr_betas=reshape(1.0d0/(1.0d0 + exp(-parameters(4:PAR))),shape(pr_betas) )
+    betas=1.0d0/(1.0d0 + exp(-parameters(1:2)))*(beta_max-beta_min)+ beta_min !1.0d0/(1.0d0 + exp(-parameters(1:2)))*(beta_max-beta_min)+ beta_min
+    beq_cur=exp(parameters(3))
+    c_floor=exp(parameters(4))
+    beq_mu=exp(parameters(5))
+    pr_betas=reshape(1.0d0/(1.0d0 + exp(-parameters(6:PAR))),shape(pr_betas) )
     
     print*,'----------------------'
     print*,"Parameter"
@@ -104,18 +104,18 @@ function obj_function(parameters)
     print('(A20,F10.2)'),"beq cur",beq_cur
     print('(A20,F10.2)'),"c floor",c_floor
     print('(A20,F10.2)'),"beq mu",beq_mu
-    print('(A20,F10.2)'),"RRA",RRA
+
     RRA_beq=RRA
 
 
-    !print('(A20,<9>F6.3)'),"pr low beta",pr_betas
+    print('(A20,<9>F6.3)'),"pr low beta",pr_betas
     
     call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)
     t_ini=5
     t_final=T_R+4
     
     obj_function=0.0d0
-    do e_l=1,G_educ;do y_l=1,1!G_types     
+    do e_l=1,G_educ;do y_l=1,G_types     
 
         obj_function=obj_function & !+sum(((asset_distribution(t_ini:t_final,e_l,y_l,1)-dist_assets_data(5,t_ini:t_final,1,y_l,e_l)))**2.0d0) & 
                                  +sum(((asset_distribution(t_ini:t_final,e_l,y_l,2)-dist_assets_data(6,t_ini:t_final,1,y_l,e_l))/dist_assets_data(6,t_ini:t_final,1,y_l,e_l))**2.0d0) !& 
@@ -126,19 +126,8 @@ function obj_function(parameters)
 
     end do;end do
     
-
-    obj_function2=0.0d0
-    do t_l=t_ini,t_final;do e_l=1,G_educ
-        moment_data=dist_assets_data(6,t_l,1,1,e_l)-dist_assets_data(6,t_l,1,3,e_l)
-        moment_model=asset_distribution(t_l,e_l,1,2)-asset_distribution(t_l,e_l,3,2)
-        obj_function2=obj_function2+ ((moment_data-moment_model)/moment_data)**2.0d0
-    end do;end do
     
-    
-
-    
-    print('(A20,F20.3,F20.3)'),'obj fct',obj_function,obj_function2
-    obj_function=obj_function+obj_function2
+    print('(A20,F20.3)'),'obj fct',obj_function
     
     if (obj_function<best_obj_fct) then
         best_obj_fct=obj_function
@@ -153,7 +142,7 @@ function obj_function(parameters)
         close (9)
         close (10)
         open(unit=9,file='parameter.txt')
-            write(9,'(<PAR>F10.3,F20.5)'),betas,c_floor,beq_cur,beq_mu,RRA,obj_function
+            write(9,'(<PAR>F10.3,F20.5)'),betas,c_floor,beq_cur,beq_mu,pr_betas,obj_function
         close (9)
     end if
     !pause

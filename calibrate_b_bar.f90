@@ -13,31 +13,29 @@ subroutine calibrate_b_bar()
     character::end_k
     
     open(unit=9,file='parameter.txt')
-        read(9,*) betas,c_floor,pr_betas,obj_function
+        read(9,*) betas,c_floor,beq_cur,beq_mu,pr_betas,obj_function
     close (9)
  
     
     print*,'----------------------'
     print*,"Parameter"
-    print('(A20,<3>F5.2)'),"beta",betas
+    print('(A20,<2>F5.2)'),"beta",betas
     print('(A20,F10.2)'),"beq cur",beq_cur
     print('(A20,F10.2)'),"c floor",c_floor
     print('(A20,F10.2)'),"beq mu",beq_mu
     print('(A20,<9>F6.3)'),"pr low beta",pr_betas
 
-    
 
     if (G_DF==1) then
         pr_betas=1.0d0
     end if
     
     b_bar_min=0.0d0
-    b_bar_max=30.0d0
+    b_bar_max=10.0d0
     it=0
     
-    VSL_data=2000.0d0
-    
-    
+    VSL_data=6000.0d0
+
     
     do while (abs(av_VSL(1)-VSL_data)>100.0d0 .and. it<10) 
         b_bar=(b_bar_max+b_bar_min)/2.0d0
@@ -78,8 +76,6 @@ subroutine calibrate_b_bar()
             print'(A4,I4,A4,I4,A4,I4,A4,F20.5,A5,F20.5)','df_l',df_l,'e_l',e_l,'y_l',y_l,'%',joint_pr(df_l,e_l,y_l),'cost',cost_ey(df_l,e_l,y_l)
             write(9,'(A4,I4,A4,I4,A4,I4,F20.5,F20.5,F20.5,F20.5)'),'df_l',df_l,'e_l',e_l,'y_l',y_l,cost_ey(df_l,e_l,y_l),av_V_ini(df_l,e_l,y_l),joint_pr(df_l,e_l,y_l),exp(1.0d0/k(df_l)*av_V_ini(df_l,e_l,y_l))/sum(exp(1.0d0/k(df_l)*av_V_ini(df_l,:,:)))
         end do;end do
-        
-    
     end do
 close (9)
 

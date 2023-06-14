@@ -41,12 +41,12 @@ set(1,'position',[150    150    750    400]) %get(0, 'Screensize')
 for y_l=1:type_y
 for e_l=1:type_e
     h((e_l-1)*3+y_l)=subplot(3,3,(e_l-1)*3+y_l)
-    plot(ini_age:2:fin_age,model(4,1:last,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{1})
+    C=plot(ini_age:2:fin_age,model(4,1:last,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{1})
     hold on
-    plot(ini_age:2:fin_age,model(5,1:last,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{2},'HandleVisibility','off')
+    A=plot(ini_age:2:fin_age,model(5,1:last,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{2},'HandleVisibility','off')
     plot(ini_age:2:fin_age,model(6,1:last,y_l,e_l,h_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{1},'HandleVisibility','off')
-    scatter(ini_age:4:fin_age,data(5,1:2:last,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','s')
-    scatter(ini_age:4:fin_age,data(6,1:2:last,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','d','HandleVisibility','off')
+    D=scatter(ini_age:4:fin_age,data(5,1:2:last,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','s')
+    B=scatter(ini_age:4:fin_age,data(6,1:2:last,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','d','HandleVisibility','off')
     scatter(ini_age:4:fin_age,data(7,1:2:last,h_l,y_l,e_l)./1000,sz,colors3(3,:),'filled','s','HandleVisibility','off')
     if e_l==1 && y_l==1
         title('Protective')
@@ -82,7 +82,8 @@ for e_l=1:type_e
     set(gcf,'color','w')
 end
 end
-I=legend('p27-p75 (Model)','Median (Model)','Location','northwest','orientation','horizontal')
+
+I=legend([A B C D],'p50: Model','p50: Data','p25-p75: Model','p25-p75: Data','Location','northwest','orientation','horizontal')
 legend('boxoff')
 I.FontSize=FS
 newPosition = [0.45 -0.02 0.1 0.1];
@@ -94,45 +95,45 @@ set(gca,'FontName','Times New Roman','FontSize',FS);
 set(gcf,'color','w')
 print('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\model_fit','-depsc')
 
-% for y_l=1:type_y
-% for e_l=1:type_e
-%     if ((e_l-1)*3+y_l>1)
-%         close(2)
-%     end
-%     hfig = figure(2);
-%     set(2,'position',[150    150    380    200])
-%     hax_new = copyobj(h((e_l-1)*3+y_l), hfig);
-%     set(gcf,'color','w')
-%     if e_l==1
-%         edu_title="Dropout"
-%     elseif e_l==2
-%         edu_title="Highschool"
-%     elseif e_l==3
-%         edu_title="College"
-%     end 
-%     if y_l==1
-%         type_title="Protective"
-%     elseif y_l==2
-%         type_title="Detrimental"
-%     elseif y_l==3
-%         type_title="Harmful"
-%     end 
-%     ylabel('$000')
-%     legend('model','data','Location','northwest','Box','off','FontSize',FS+2)
-%     set(gca,'FontName','Times New Roman','FontSize',FS);
-%     str_title=strcat(edu_title," ", type_title)
-%     str_title2=strcat(edu_title, type_title)
-%     title(str_title)
-%     set(hax_new, 'Position', get(0, 'DefaultAxesPosition'));
-%     print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\model_fit',str_title2),'-depsc')
-%     set(gca,'FontName','Times New Roman','FontSize',FS);
-% end
-% end
+for y_l=1:type_y
+for e_l=1:type_e
+    if ((e_l-1)*3+y_l>1)
+        close(2)
+    end
+    hfig = figure(2);
+    set(2,'position',[150    150    380    200])
+    hax_new = copyobj(h((e_l-1)*3+y_l), hfig);
+    set(gcf,'color','w')
+    if e_l==1
+        edu_title="Dropout"
+    elseif e_l==2
+        edu_title="Highschool"
+    elseif e_l==3
+        edu_title="College"
+    end 
+    if y_l==1
+        type_title="Protective"
+    elseif y_l==2
+        type_title="Detrimental"
+    elseif y_l==3
+        type_title="Harmful"
+    end 
+    ylabel('$000')
+    legend('model','data','Location','northwest','Box','off','FontSize',FS+2)
+    set(gca,'FontName','Times New Roman','FontSize',FS);
+    str_title=strcat(edu_title," ", type_title)
+    str_title2=strcat(edu_title, type_title)
+    title(str_title)
+    set(hax_new, 'Position', get(0, 'DefaultAxesPosition'));
+    print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\model_fit',str_title2),'-depsc')
+    set(gca,'FontName','Times New Roman','FontSize',FS);
+end
+end
 
 % delta_a=reshape(A,6,T,type_e)
 
-figure(2)
-set(2,'position',[150    150    500    400])
+figure(3)
+set(3,'position',[150    150    500    400])
 for e_l=1:3
     for h_l=1:2
         subplot(3,2,h_l+(e_l-1)*2)
@@ -236,9 +237,9 @@ set(gca,'FontName','Times New Roman','FontSize',FS);
 if j==1
 %     ylim([-1.5,1.5])
 elseif j==2
-   ylim([min(data_mat(:,:,df_l,j),[],'all')-5,max(data_mat(:,:,df_l,j),[],'all')+5])
+   ylim([min(data_mat(:,:,df_l,j),[],'all')-0.1,max(data_mat(:,:,df_l,j),[],'all')+0.1])
 elseif j==3
-    ylim([0,1])
+%     ylim([0,1])
 end
 set(gcf,'color','w')
 end
@@ -276,9 +277,9 @@ for df_l=1:2
     legend([qw{1},qw{2},qw{3}], {'DO','HS','Co'}, 'location', 'best','Orientation','horizontal','Box','off','Position',[0.4 0.5 0.2 0.96])
     xlabel('Lifetime Utility')
     ylabel('log share')
-    if df_l==2
+
     ylim([-7 0])
-    end
+
 %     xlim([5 16])
     theString = sprintf('log(share) = %.2f V_0 %.2f ', Slope, Intercept);
     xL=xlim
