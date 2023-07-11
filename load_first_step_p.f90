@@ -42,7 +42,7 @@ subroutine load_transitions_retirees()
         real(DP),dimension(covariates,clusters,L_gender,L_educ)::beta_h
         real(DP),dimension(covariates,clusters,L_gender,L_educ)::beta_d
         real(DP),dimension(clusters+1,clusters+1,generations,types,L_gender,L_educ)::H
-        integer::t_l,h_l
+        integer::t_l,h_l,e_l
         real(DP),dimension(G_h+1,G_types,G_educ)::pr_sr
         real(DP),dimension(types,L_gender,L_educ,clusters+1)::LE
         real(DP),dimension(generations,clusters,L_gender,L_educ,types,cohorts)::joint_yh
@@ -65,6 +65,9 @@ subroutine load_transitions_retirees()
         close(9)
         
         fraction_types=sum(fraction_t(1,1,:,:,reference_cohort,:),3)/dble(iterations) 
+        do e_l=1,G_educ
+            fraction_types(e_l,:)=fraction_types(e_l,:)/sum(fraction_types(e_l,:)) 
+        end do
         fraction_h_ey=sum(fraction_h(1,:,1,:,:,:),4)/dble(iterations) 
         
         if (reference_cohort==3) then
@@ -259,8 +262,8 @@ subroutine load_income_risk()
             y_d(y_l)=1.0d0
             !reference_cohort
             cohort_d(4)=1.0d0
-            X(:,1)=(/1.0_dp,dble(age),dble(age)**2.0d0,dble(age)**3.0d0,dble(h_l-1),dble(h_l-1)*dble(age)/) 
-            gross_annual_income=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0
+            X(:,1)=(/1.0_dp,dble(age),dble(age)**2.0d0,dble(age)**3.0d0,dble(h_l-1),dble(h_l-1)*dble(age)/)
+            gross_annual_income=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0 !beta(:,3)
             gross_annual_income2(y_l,e_l,t_l,h_l,z_l,z_l2)=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0
             taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=min(gross_annual_income,ss_bar)*2.0d0
             income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=(av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau) - tau_mcr*gross_annual_income-tau_ss*min(gross_annual_income,ss_bar))*2.0d0
@@ -274,6 +277,9 @@ subroutine load_income_risk()
             print*,'negative income'           
         end if
     end do;end do;end do;end do;end do;end do
+    
+    !print*,'chg this!!' gross_annual_income2(3,3,10,:,5,5)
+    !income_grid(:,3,:,:,:,:)=income_grid(:,3,:,:,:,:)*1.5d0
 
     call compute_pension()
     
@@ -414,10 +420,10 @@ subroutine compute_pension()
                         exit
                     end if
                     
-                    if (income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l)>0.0d0 .and. h==2) then
-                        counter_income(t_l)=counter_income(t_l)+1
-                        panel_income(counter_income(t_l),t_l)=log(income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l)*1000.0d0/2.0d0)
-                    end if
+
+                    counter_income(t_l)=counter_income(t_l)+1
+                    panel_income(counter_income(t_l),t_l)=income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l) !gross_earnings(t_l) 
+
             
                     if (t_l<=T_R) then
                         if (h==1 .and. pi_old<G_PI .and. pi_old>0) then
@@ -438,13 +444,13 @@ subroutine compute_pension()
                         coeff=0.0d0
                     end if 
                     call sort(gross_earnings,T_R)
-                    aime=sum(gross_earnings(T_R-16:T_R))/17.0d0/2.0d0/12.0d0
-                    pia=0.9*min(aime,0.895)
+                    aime=sum(gross_earnings(T_R-16:T_R))/17.0d0/2.0d0/12.0d0 
+                    pia=0.9d0*min(aime,0.895d0)
                     if (aime>0.895) then
-                        pia=pia+(min(aime,5.397)-0.895)*0.32
+                        pia=pia+(min(aime,5.397d0)-0.895d0)*0.32d0
                     end if
-                    if (aime>5.397) then
-                        pia=pia+(aime-5.397)*0.15
+                    if (aime>5.397d0) then
+                        pia=pia+(aime-5.397d0)*0.15d0
                     end if
                     pia=coeff*pia
                     counter(pi_l)=counter(pi_l)+1
@@ -466,7 +472,7 @@ subroutine compute_pension()
                 end if             
             end do
         end do;end do
-!av_income_panel(:,2,1)
+!av_income_panel(:,1,1)
 end subroutine  
 
     

@@ -24,7 +24,9 @@
 	IMPLICIT NONE
 	INTEGER(I4B) :: i,ilo,inhi
 	REAL(DP) :: rtol,ysave,ytry,ytmp
+    
 	ndim=assert_eq(size(p,2),size(p,1)-1,size(y)-1,'amoeba')
+    
 	iter=0
 	psum(:)=sum(p(:,:),dim=1)
 	do

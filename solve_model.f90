@@ -31,13 +31,13 @@ subroutine solve_model(a_policy,VSL)
              REAL(DP),dimension(G_nkk,G_h+1,G_PI), INTENT(IN) ::FV
              integer, INTENT(IN) :: t_l,h_l,pi_l,e_l,y_l
         END FUNCTION ExpConVal
-        FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
+        FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l,df_l)
             use nrtype; use preference_p;use var_first_step
             implicit none
                 REAL(DP):: ExpMarginalUtility
                 REAL(DP), INTENT(IN) :: a
                 REAL(DP),dimension(G_nkk,G_h,G_PI), INTENT(IN) ::FSavings
-                integer, INTENT(IN) :: t_l,h_l,pi_l,e_l,y_l
+                integer, INTENT(IN) :: t_l,h_l,pi_l,e_l,y_l,df_l
         end function ExpMarginalUtility 
         FUNCTION value_of_stat_life (a_today,a_prime,FV,t_l,h_l,pi_l,e_l,y_l,df_l)
         use nrtype; use preference_p;use var_first_step
@@ -63,10 +63,10 @@ subroutine solve_model(a_policy,VSL)
     
     print*,'Compute value of bequest'
     V(:,1:T-1,G_h+1,:,:,:,:)=0.0d0
-    do x_l=1,G_nkk
-        V(x_l,:,G_h+1,:,:,:,:)=beq_fct((1.0d0+r)*a_grid(x_l))
+    do x_l=1,G_nkk;do t_l=1,T;do df_l=1,G_df
+        V(x_l,:,G_h+1,:,:,:,:)=betas(df_l)**(T-t_l-1)*beq_fct((1.0d0+r)*a_grid(x_l))
         a_policy(:,T,:,:,:,:,:)=0.0d0
-    end do
+    end do;end do; end do
     
     print*,'Started solving model'
     
@@ -98,10 +98,10 @@ subroutine solve_model(a_policy,VSL)
             !Std EGM
             a_l1=1
             do a_l2=1,G_nkk
-                dV_x2(a_l2)=betas(df_l)*(1.0d0+r)*ExpMarginalUtility(a_grid(a_l2),a_policy(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l)
+                dV_x2(a_l2)=betas(df_l)*(1.0d0+r)*ExpMarginalUtility(a_grid(a_l2),a_policy(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l,df_l)
                 x_policy(a_l2)=(dV_x2(a_l2)*n_bar(t_l))**(-1.0d0/RRA)*n_bar(t_l)+a_grid(a_l2)
                 if (isnan(x_policy(a_l2))) then
-                    print*,ExpMarginalUtility(a_grid(a_l2),a_policy(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l)
+                    print*,ExpMarginalUtility(a_grid(a_l2),a_policy(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l,df_l)
                     print*,'isnan solve model'
                 else
                     V_x2(a_l2)=u_fct(x_policy(a_l2)-a_grid(a_l2),n_bar(t_l),h_l,y_l)+betas(df_l)*ExpConVal(a_grid(a_l2),V(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l)!(1.0d0-betas(y_l))
@@ -241,10 +241,12 @@ subroutine solve_model(a_policy,VSL)
             do x_l=1,G_nkk
                 if (a_policy(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)>a_grid(x_l) .and. a_grid(x_l)>c_floor) then
                     print*,'error'
+                    pause
                 end if
                 if (x_l>1) then
                     if (a_policy(x_l-1,t_l,h_l,pi_l,e_l,y_l,df_l)>a_policy(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)) then
                         print*,'error'
+                        pause
                         go to 2
                     end if
                 end if
@@ -280,9 +282,9 @@ FUNCTION u_fct(c,n,h,y)
             REAL(DP), INTENT(IN) :: c,n
             integer,intent(in):: h,y
             if (RRA/=1.0d0) then
-                u_fct=(1.0d0-delta_h*dble(h-1))*(c/n)**(1.0d0-RRA)/(1.0d0-RRA)+b_bar !-1.0d0/(1.0d0-RRA)
+                u_fct=(1.0d0-delta_h*dble(h-1))*(c/n)**(1.0d0-RRA)/(1.0d0-RRA)+b_bar(h) !-1.0d0/(1.0d0-RRA)
             else
-                u_fct=(1.0d0-delta_h*dble(h-1))*log(c/n)+b_bar
+                u_fct=(1.0d0-delta_h*dble(h-1))*log(c/n)+b_bar(h)
             end if
             
 END FUNCTION u_fct
@@ -345,13 +347,13 @@ FUNCTION marginal_u_fct (c,n,h)
         marginal_u_fct=(1.0d0-delta_h*dble(h-1))*(1.0d0/n)*(c/n)**(-RRA)
 END FUNCTION marginal_u_fct
     
-FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
+FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l,df_l)
             use nrtype; use preference_p;use var_first_step
             implicit none
              REAL(DP):: ExpMarginalUtility,a2
              REAL(DP), INTENT(IN) :: a
              REAL(DP),dimension(G_nkk,G_h,G_PI), INTENT(IN) ::FSavings
-             integer, INTENT(IN) :: t_l,h_l,pi_l,e_l,y_l
+             integer, INTENT(IN) :: t_l,h_l,pi_l,e_l,y_l,df_l
              REAL(DP)::cash_on_hand,alpha,const,Pr_zero_mu,non_zero_mu
              integer:: xi_l2, h_l2,loc_coh,pi_l2,ts_l2
              interface
@@ -422,7 +424,7 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
                         else!if (t_l==T-1) then
                             cash_on_hand=max((1.0d0+r)*a+PI_grid(pi_l,e_l,y_l)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),0.0d0)
                             if (cash_on_hand>0.0d0) then
-                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*marginal_beq_fct(cash_on_hand)
+                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*betas(df_l)**(T-t_l-1)*marginal_beq_fct(cash_on_hand)
                             end if
                         end if
                     end do;end do
@@ -466,7 +468,7 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l)
                         else
                             cash_on_hand=max((1.0d0+r)*a+income_grid(y_l,e_l,t_l,min(h_l2,G_h),pi_l2,ts_l2)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),0.0d0)
                             if (cash_on_hand>0.0d0) then
-                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_beq_fct(cash_on_hand)
+                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*betas(df_l)**(T-t_l-1)*marginal_beq_fct(cash_on_hand)
                             end if
                         end if
                    end do;end do;end do; end do
@@ -543,6 +545,6 @@ FUNCTION value_of_stat_life (a_today,a_prime,FV,t_l,h_l,pi_l,e_l,y_l,df_l)
             end do;end do;end do;end do
         end if
             
-        value_of_stat_life=betas(df_l)*(ExpConVal_alive-ExpConVal_dead)/(1.0d0/n_bar(t_l)*(((a_today-a_prime)/n_bar(t_l))**(-RRA)))!betas(y_l)*(ExpConVal_alive-ExpConVal_dead)/((1.0d0-betas(y_l))*1.0d0/n_bar(t_l)*(((a_today-a_prime)/n_bar(t_l))**(-RRA)))
+        value_of_stat_life=betas(df_l)*(ExpConVal_alive-ExpConVal_dead)/(1.0d0/n_bar(t_l)*(((a_today-a_prime)/n_bar(t_l))**(-RRA)))
         
 END FUNCTION value_of_stat_life

@@ -251,8 +251,8 @@ if e_l==1
         ylabel('Impatient')
     elseif df_l==2
         ylabel('Patient')
-    elseif df_l==3
-        ylabel('All')
+%     elseif df_l==3
+%         ylabel('All')
     end
 end
 

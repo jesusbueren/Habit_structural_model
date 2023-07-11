@@ -73,7 +73,7 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
             call RANDOM_NUMBER(u)
             ind=1
             do while (y==-9)
-                if (u(10,1)<sum(fraction_types(e,1:ind))) then
+                if (u(10,1)<sum(fraction_types(e,1:ind))) then 
                     y=ind
                 else
                     ind=ind+1
@@ -219,7 +219,9 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
         
                 !If dead go to next individual
                 if (h==G_h+1) then
-                    !V_i(df,y,counter(1,y,df))=V_i(df,y,counter(1,y,df))+betas(df)**t_l*beq_fct(max(cash_on_hand,0.0d0)*(1.0d0-lambda_c(e,y)))!
+
+                    V_i(df,y,counter(1,y,df))=V_i(df,y,counter(1,y,df))+betas(df)**(T-t_l)*beq_fct(max(cash_on_hand,0.0d0)*(1.0d0-lambda_c(e,y)))
+
                     if (isnan(V_i(df,y,counter(1,y,df)))) then
                         print*,''
                     end if
@@ -242,13 +244,15 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                         alpha=1.0d0-(cash_on_hand-a_grid(G_nkk-1))/step
                         savings=alpha*a_policy(G_nkk-1,t_l,h,pi_l,e,y,df)+(1.0d0-alpha)*a_policy(G_nkk,t_l,h,pi_l,e,y,df) !a_policy(loc_coh,t_l,h,pi_l,e,y,df)
                     end if
-                    panel_assets(counter_y(t_l,y),t_l,y)=savings
+                    panel_assets(counter_y(t_l,y),t_l,y)=savings !cash_on_hand-savings !
                     if (t_l>1) then
                         counter_h(lag_h,t_l)=counter_h(lag_h,t_l)+1
                         panel_delta_assets(counter_h(lag_h,t_l),lag_h,t_l)=savings-lag_savings
                     end if
-
+       
                     V_i(df,y,counter(1,y,df))=V_i(df,y,counter(1,y,df))+betas(df)**(t_l-1)*u_fct((cash_on_hand-savings)*(1.0d0-lambda_c(e,y)),n_bar(t_l),h,y)
+
+                    
                     if (isnan(V_i(df,y,counter(1,y,df)))) then
                         print*,''
                     end if
