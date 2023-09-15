@@ -27,13 +27,14 @@ subroutine welfare_analysis()
     end interface
     
     
-    open(unit=9,file='parameter.txt')
-        read(9,*) betas,beq_cur,c_floor,beq_mu,pr_betas
+   open(unit=9,file='parameter.txt')
+        read(9,*) c_floor,beq_cur,beq_mu
     close (9)
     
-    !Define b_bar
-    b_bar=0.05d0
- 
+    open(unit=9,file='b_bar_cost.txt')
+        read(9,*)  b_bar
+    close(9)
+    
     
     print*,'----------------------'
     print*,"Parameter"
@@ -41,14 +42,22 @@ subroutine welfare_analysis()
     print('(A20,F10.2)'),"beq cur",beq_cur
     print('(A20,F10.2)'),"c floor",c_floor
     print('(A20,F10.2)'),"beq mu",beq_mu
-    print('(A20,F10.2)'),"b_bar",b_bar
+    print('(A20,F10.2)'),"b_bar",b_bar(1)
     
+    !!
+    !print*,'same health transitions than dropouts'
+    !H_sm(:,:,:,:,3)=H_sm(:,:,:,:,1)
+    !H_sm(:,:,:,:,2)=H_sm(:,:,:,:,1)
     
-    !call solve_model(a_policy,VSL)
+    !print*,'same income than dropouts'
+    !income_grid(:,3,:,:,:,:)=income_grid(:,1,:,:,:,:)
+    !income_grid(:,2,:,:,:,:)=income_grid(:,1,:,:,:,:)
     
-    open(unit=9,file='C:\Users\jbueren\OneDrive - Istituto Universitario Europeo\endo_health\sol.txt')
-        read(9,*) a_policy,VSL
-    close (9)
+    call solve_model(a_policy,VSL)
+    
+    !open(unit=9,file='C:\Users\jbueren\OneDrive - Istituto Universitario Europeo\endo_health\sol.txt')
+    !    write(9,*) a_policy,VSL
+    !close (9)
     
 
     call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
@@ -59,7 +68,7 @@ subroutine welfare_analysis()
     lambda_c=0.0d0
     do df_l=1,G_df
         do e=1,G_educ;do y=1,G_types
-            e_ref=e;y_ref=3
+            e_ref=e;y_ref=2
             if (e/=e_ref .or. y/=y_ref ) then !reference category
                 lambda_max=1.0
                 lambda_min=0.0d0

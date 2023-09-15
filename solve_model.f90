@@ -86,8 +86,8 @@ subroutine solve_model(a_policy,VSL)
                     V(x_l,t_l,h_l,pi_l,:,:,:)=u_fct(c_floor,n_bar(t_l),h_l,y_l)
                 else
                     V(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)=u_fct(a_grid(x_l),n_bar(t_l),h_l,y_l)
-                    a_policy(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)=0.0d0
                 end if
+                a_policy(x_l,t_l,h_l,pi_l,e_l,y_l,df_l)=0.0d0
             end do 
         else
 2           jumps=0
@@ -545,6 +545,6 @@ FUNCTION value_of_stat_life (a_today,a_prime,FV,t_l,h_l,pi_l,e_l,y_l,df_l)
             end do;end do;end do;end do
         end if
             
-        value_of_stat_life=betas(df_l)*(ExpConVal_alive-ExpConVal_dead)/(1.0d0/n_bar(t_l)*(((a_today-a_prime)/n_bar(t_l))**(-RRA)))
+        value_of_stat_life=(betas(df_l)*ExpConVal_alive-betas(df_l)**(T-t_l)*ExpConVal_dead)/(1.0d0/n_bar(t_l)*(((a_today-a_prime)/n_bar(t_l))**(-RRA)))
         
 END FUNCTION value_of_stat_life

@@ -6,7 +6,7 @@ A=fscanf(fileID,'%f');
 fclose(fileID);
 A = standardizeMissing(A,-9)
 T=36
-type_y=3
+type_y=2
 type_e=3
 model=reshape(A,7,T,type_y,type_e)
 
@@ -23,7 +23,7 @@ fileID=fopen('wealth_moments_data.txt');
 mean_wealth=textscan(fileID,'%14.10f','TreatAsEmpty',{'**************'});
 fclose(fileID);
 
-data=reshape(mean_wealth{1},9,37,2,3,3);
+data=reshape(mean_wealth{1},9,37,2,type_y,3);
 
 colors = {  [0,   0,   0.2]   [0.9290    0.6940    0.1250]    [0.8500    0.3250    0.0980] [0   0.4470    0.7410] [0.4940    0.1840    0.5560]};
 pattern = { '--'  '-'  ':' '-.' '-'};
@@ -40,7 +40,7 @@ figure(1)
 set(1,'position',[150    150    750    400]) %get(0, 'Screensize')
 for y_l=1:type_y
 for e_l=1:type_e
-    h((e_l-1)*3+y_l)=subplot(3,3,(e_l-1)*3+y_l)
+    h((e_l-1)*3+y_l)=subplot(3,2,(e_l-1)*2+y_l)
     C=plot(ini_age:2:fin_age,model(4,1:last,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{1})
     hold on
     A=plot(ini_age:2:fin_age,model(5,1:last,y_l,e_l),'Color',colors{1},'linewidth',1.5,'linestyle',pattern{2},'HandleVisibility','off')
@@ -184,61 +184,45 @@ close all
 clc
 cd('C:\Users\jbueren\Google Drive\endo_health\structural_model')
 data=importdata('costs_e_y.txt')
-counterfactual=importdata('counterfactual.txt')
 
 colors = {  [0.4660    0.6740    0.1880]+0.1   [0.9290    0.6940    0.1250]+0.1    [0.8500    0.3250    0.0980]+0.1 };
 colors2 ={  [0.4660    0.6740    0.1880]-0.2   [0.9290    0.6940    0.1250]-0.2    [0.8500    0.3250    0.0980]-0.2   };
 colors3 ={  [0.4660    0.6740    0.1880]-0.3   [0.9290    0.6940    0.1250]-0.2    [0.8500    0.3250    0.0980]-0.3   };
-colors_s =   [0.4660    0.6740    0.1880; 0.9290    0.6940    0.1250; 0.8500    0.3250    0.0980] ;
+colors_s =   [0.4660    0.6740    0.1880; 0.9290    0.6940    0.1250] ; %; 0.8500    0.3250    0.0980
 FS=10
-
-G_df=2
+type_y=2
+G_df=1
 data_mat=data.data
-data_mat=reshape(data_mat(:,2:5),3,3,G_df+1,4)
+data_mat=reshape(data_mat(:,2:5),type_y,3,G_df+1,4)
 % counterfactual=counterfactual.data
 % counterfactual=reshape(counterfactual(:,2:4),3,3,2,3)
 costs=data_mat(:,:,:,1)
 
 
-
-for df_l=1:G_df+1
-for j=1:3
-for e_l=1:3
-
-p=e_l
-
-X=categorical({'Protective','Detrimental','Harmful'})
-X = reordercats(X,{'Protective','Detrimental','Harmful'});
-if df_l<G_df+1
+for j=1:2
     figure(j)
     set(j,'position',[150    150    500    300])
-else
-    figure(3)
-    set(3,'position',[150    150    500    600])
-end
+for df_l=1:G_df
+for e_l=1:3
 
-if j==1 && df_l<G_df+1
-    subplot(G_df,3,p+(df_l-1)*3)
+
+X=categorical({'Protective','Detrimental'})
+X = reordercats(X,{'Protective','Detrimental'});
+
+if j==1 
+    subplot(G_df,3,e_l+(df_l-1)*3)
     b=bar(X,data_mat(:,e_l,df_l,j),'FaceColor','flat')
-    for c_l=1:3
-        b.CData(c_l,:) = colors{c_l}
-    end
-elseif j==2 && df_l<G_df+1
-    subplot(G_df,3,p+(df_l-1)*3)
-    b=bar(X,data_mat(:,e_l,df_l,j),'FaceColor','flat')
-    for c_l=1:3
-        b.CData(c_l,:) = colors{c_l}
-    end
-else
-    
-    subplot(G_df+1,3,p+(df_l-1)*3)
-    b=bar(X,squeeze(data_mat(:,e_l,df_l,j:j+1))./sum(squeeze(data_mat(:,e_l,df_l,j:j+1))),'FaceColor','flat') 
 %     for c_l=1:3
-%        b(1).CData(c_l,:) = colors{c_l}
-%        b(2).CData(c_l,:) = colors2{c_l}
-%        b(3).CData(c_l,:) = colors3{c_l}
+%         b.CData(c_l,:) = colors{c_l}
+%     end
+elseif j==2 
+    subplot(G_df,3,e_l+(df_l-1)*3)
+    b=bar(X,data_mat(:,e_l,df_l,j),'FaceColor','flat')
+%     for c_l=1:3
+%         b.CData(c_l,:) = colors{c_l}
 %     end
 end
+hold on
 if e_l==1
     title('Dropouts')
 elseif e_l==2 
@@ -258,7 +242,7 @@ end
 
 set(gca,'FontName','Times New Roman','FontSize',FS);
 if j==1
-%     ylim([-1.5,1.5])
+    ylim([0,30])
 elseif j==2
    ylim([min(data_mat(:,:,df_l,j),[],'all')-10,max(data_mat(:,:,df_l,j),[],'all')+10])
 
@@ -271,11 +255,58 @@ print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\stage1_',num2str
 end
 end
 
+
+for df_l=1:G_df
+ j=3
+
+X=categorical({'Dropouts','Highschool','College'})
+X = reordercats(X,{'Dropouts','Highschool','College'});
+
+figure(3)
+set(3,'position',[150    150    700    300])
+
+
+subplot(1,G_df,df_l)
+for e_l=1:3
+    A(e_l,:,:)=squeeze(data_mat(:,e_l,df_l,j:j+1))./sum(squeeze(data_mat(:,e_l,df_l,j:j+1)))
+    B(e_l,:)=A(e_l,2,:)
+end
+b=bar(X,B,'FaceColor','flat') 
+%     for c_l=1:3
+%        b(1).CData(c_l,:) = colors{c_l}
+%        b(2).CData(c_l,:) = colors2{c_l}
+%        b(3).CData(c_l,:) = colors3{c_l}
+%     end
+
+% if df_l==1
+%     title('Impatient')
+% elseif df_l==2 
+%     title('Patient')
+% elseif df_l==3
+%     title('All')
+% end
+legend('Data','Model')
+set(gca,'FontName','Times New Roman','FontSize',FS);
+if j==1
+%     ylim([-1.5,1.5])
+elseif j==2
+   ylim([min(data_mat(:,:,df_l,j),[],'all')-10,max(data_mat(:,:,df_l,j),[],'all')+10])
+
+elseif j==3
+    ylim([0,0.7])
+end
+set(gcf,'color','w')
+end
+% print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\stage1_',num2str(j)),'-depsc')
+
+
+
+
 for df_l=1:2
     df_l
-data_mat(1,1,df_l,2)-data_mat(3,1,df_l,2)
-data_mat(1,3,df_l,2)-data_mat(3,3,df_l,2)
-data_mat(1,3,df_l,2)-data_mat(3,3,df_l,2)-(data_mat(1,1,df_l,2)-data_mat(3,1,df_l,2))
+data_mat(1,1,df_l,2)-data_mat(2,1,df_l,2)
+data_mat(1,3,df_l,2)-data_mat(2,3,df_l,2)
+data_mat(1,3,df_l,2)-data_mat(2,3,df_l,2)-(data_mat(1,1,df_l,2)-data_mat(2,1,df_l,2))
 end
 
 

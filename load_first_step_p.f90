@@ -254,7 +254,7 @@ subroutine load_income_risk()
 
     income_grid=0.0d0
     do t_l=1,T_R;do y_l=1,G_types;do e_l=1,G_educ;do h_l=1,G_h;do z_l=1,G_PI;do z_l2=1,G_PI
-        if (z_l<G_PI) then
+2        if (z_l<G_PI) then
             age=first_age_sm+(t_l-1)*2-70 
             z=mag_p(z_l,t_l,e_l)
             z2=mag_tr(z_l2,e_l)
@@ -266,15 +266,18 @@ subroutine load_income_risk()
             gross_annual_income=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0 !beta(:,3)
             gross_annual_income2(y_l,e_l,t_l,h_l,z_l,z_l2)=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0
             taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=min(gross_annual_income,ss_bar)*2.0d0
-            income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=(av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau) - tau_mcr*gross_annual_income-tau_ss*min(gross_annual_income,ss_bar))*2.0d0
-            income_tax(y_l,e_l,t_l,h_l,z_l,z_l2)=gross_annual_income*2.0d0-av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau)*2.0d0
+
+            income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=(min(gross_annual_income,av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau)) - tau_mcr*gross_annual_income-tau_ss*min(gross_annual_income,ss_bar))*2.0d0
+            income_tax(y_l,e_l,t_l,h_l,z_l,z_l2)=gross_annual_income*2.0d0-min(gross_annual_income,av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau))*2.0d0
         else
             income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
             gross_annual_income2(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
             taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
+            income_tax(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
         end if
         if (income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)<0.0d0) then
-            print*,'negative income'           
+            print*,'negative income'   
+            go to 2
         end if
     end do;end do;end do;end do;end do;end do
     
@@ -354,7 +357,6 @@ subroutine compute_pension()
                                 ind=ind+1
                             end if
                         end do
-
                     else
                         !Sample persisent income shock from cond distribution
                         if (t_l<=T_R) then
@@ -472,7 +474,7 @@ subroutine compute_pension()
                 end if             
             end do
         end do;end do
-!av_income_panel(:,1,1)
+!av_income_panel(:,1,1) av_income_panel(:,:,1)  std_income(:,:,1)
 end subroutine  
 
     

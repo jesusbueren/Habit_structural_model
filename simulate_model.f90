@@ -237,9 +237,11 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                     if (t_l>1) then
                         lag_savings=savings
                     end if
-                    if (loc_coh<G_nkk .and. cash_on_hand>0.0d0) then
+                    if (loc_coh<G_nkk) then
                         alpha=1.0d0-(cash_on_hand-a_grid(loc_coh))/step
                         savings=alpha*a_policy(loc_coh,t_l,h,pi_l,e,y,df)+(1.0d0-alpha)*a_policy(loc_coh+1,t_l,h,pi_l,e,y,df) 
+                    elseif (cash_on_hand==c_floor) then
+                        savings=0.0d0
                     else
                         alpha=1.0d0-(cash_on_hand-a_grid(G_nkk-1))/step
                         savings=alpha*a_policy(G_nkk-1,t_l,h,pi_l,e,y,df)+(1.0d0-alpha)*a_policy(G_nkk,t_l,h,pi_l,e,y,df) !a_policy(loc_coh,t_l,h,pi_l,e,y,df)

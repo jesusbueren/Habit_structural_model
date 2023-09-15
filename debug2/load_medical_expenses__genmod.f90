@@ -1,0 +1,9 @@
+        !COMPILER-GENERATED INTERFACE MODULE: Fri Sep 15 10:49:51 2023
+        ! This source file is for reference only and may not completely
+        ! represent the generated interface used by the compiler.
+        MODULE LOAD_MEDICAL_EXPENSES__genmod
+          INTERFACE 
+            SUBROUTINE LOAD_MEDICAL_EXPENSES
+            END SUBROUTINE LOAD_MEDICAL_EXPENSES
+          END INTERFACE 
+        END MODULE LOAD_MEDICAL_EXPENSES__genmod

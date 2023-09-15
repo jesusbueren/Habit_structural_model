@@ -3,8 +3,8 @@ module state_space_dim
     implicit none
     integer,parameter::first_age_sm=26, last_age_sm=98,age_svl=36 !First and last age in the model
     integer,parameter::T=(last_age_sm-first_age_sm+1)/2, T_R=(67-first_age_sm+1)/2, T_50=(50-first_age_sm+1)/2,T_svl=(age_svl-first_age_sm+1)/2 !T: Model periods, T_R: time at retirement, T_50: period at age 50
-    integer,parameter::G_educ=3,G_PI=10,G_types=3,G_DF=2,G_h=2,G_cohorts=5 !G_educ: education levels,G_PI: pension income,G_types: health behavior types,G_DF: discount factors,G_h: health types
-    integer,parameter::G_nzz=10,G_nkk=100 !G_nzz: grid for the persistent medical shock ; G_nkk: grid for assets  
+    integer,parameter::G_educ=3,G_PI=10,G_types=2,G_DF=1,G_h=2,G_cohorts=5 !G_educ: education levels,G_PI: pension income,G_types: health behavior types,G_DF: discount factors,G_h: health types
+    integer,parameter::G_nzz=10,G_nkk=200 !G_nzz: grid for the persistent medical shock ; G_nkk: grid for assets  
     integer,parameter::indv_sim=100000
     real(DP)::tol=1.0d-11
 end module
@@ -13,8 +13,9 @@ module var_first_step
     use nrtype;use state_space_dim
     implicit none
     integer,parameter::reference_cohort=3
-    real(DP),parameter::a_min=0.0d0,a_max=5000.0d0,r=(1.0d0+0.035d0)**2.0d0-1.0d0
-    real(DP)::lambda=0.940772d0,tau=0.158466d0,tau_mcr=0.029d0,tau_ss=0.124d0,av_income=51.4d0,ss_bar=128.400d0
+    real(DP),parameter::a_min=0.0d0,a_max=5000.0d0
+    real(DP)::r=(1.0d0+0.02d0)**2.0d0-1.0d0
+    real(DP)::tau_mcr=0.029d0,tau_ss=0.124d0,av_income=51.4d0,ss_bar=128.400d0,lambda=0.873964d0,tau=0.108002d0
     real(DP)::step=(a_max-a_min)/dble(G_nkk-1)  
     real(DP),dimension(G_nkk)::a_grid
     real(DP),dimension(G_h+1,G_h+1,T,G_types,G_educ)::H_sm=-9.0d0 !Health transition probabilities in the model
@@ -37,13 +38,13 @@ module preference_p
     use nrtype; use state_space_dim
     implicit none
     !initial guess of parameters
-    real(DP),dimension(G_DF)::betas=-9.0d0,pr_betas_u
+    real(DP),dimension(G_DF)::betas=0.98d0,pr_betas_u
     real(DP),dimension(G_types,G_educ)::pr_betas=1.0d0
     real(DP),parameter::RRA=1.0d0
     real(DP)::beq_cur=100.0d0,c_floor=-9.0d0,beq_mu=0.0d0,best_obj_fct=1.0d0/0.0d0,delta_h=0.0d0,c_bar=0.0d0
     real(DP),dimension(G_h)::b_bar=0.0d0
     real(DP)::RRA_beq=RRA
-    integer,parameter::PAR=14
+    integer,parameter::PAR=3
     real(DP)::beta_max=1.1d0, beta_min=0.6d0
 end module
     
@@ -51,16 +52,16 @@ module initial_p
     use nrtype; use state_space_dim
     implicit none
     !initial guess of parameters
-    real(DP),dimension(G_DF)::betas_ini=(/0.871d0,0.919d0/)
-    real(DP)::beq_cur_ini=6.669d0 ,c_floor_ini=0.479d0,beq_mu_ini=28.17d0
-    real(DP),dimension(G_types,G_educ)::pr_betas_ini=reshape((/0.511d0,0.575d0,0.518d0,0.385d0,0.552d0,0.566d0,0.263d0,0.597d0,0.614d0/),shape(pr_betas_ini))
+    real(DP),dimension(G_DF)::betas_ini=0.99d0!(/0.89d0,0.937d0/)
+    real(DP)::beq_cur_ini=6.76d0 ,c_floor_ini=28.8d0,beq_mu_ini=4.35d0,delta_h_ini=0.2d0
+    real(DP),dimension(G_types,G_educ)::pr_betas_ini=1.0d0 !reshape((/0.511d0,0.575d0,0.518d0,0.385d0,0.552d0,0.566d0,0.263d0,0.597d0,0.614d0/),shape(pr_betas_ini))
 end module
     
     
 module second_step
     use nrtype; use state_space_dim
     implicit none
-    integer::PAR_2=(G_types-1)+(G_educ-1)+1
+    integer::PAR_2=(G_types-1)+(G_educ-1)+2
     real(dp),dimension(G_df)::pr_beta_un
     real(DP),dimension(G_df,G_educ,G_types)::joint_pr,cost_ey,av_V_ini    
     real(DP),dimension(G_educ)::cost_e    

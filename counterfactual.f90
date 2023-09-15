@@ -2,7 +2,7 @@ subroutine counterfactuals()
     use nrtype; use preference_p; use global_var; use var_first_step
     implicit none
     real(DP)::obj_function,av_VSL_do,b_bar_max,b_bar_min,VSL_data
-    real(DP),dimension(G_df)::k
+    real(DP),dimension(G_df)::k,k_zero
     real(DP),dimension(T,G_h,G_educ,G_types,4)::asset_distribution
     real(DP),dimension(G_DF,G_educ,G_types)::av_VSL,av_V_ini,joint_pr,cost_ey,cost_zero
     real(DP),dimension(8,generations,types,L_educ)::dist_assets_data
@@ -21,16 +21,18 @@ subroutine counterfactuals()
     
     !load preferences
     open(unit=9,file='parameter.txt')
-        read(9,*) betas,c_floor,beq_cur,beq_mu,pr_betas
+        read(9,*) c_floor,beq_cur,beq_mu,obj_function
     close (9)
-    open(unit=9,file='b_bar_costs.txt')
-        read(9,*)  b_bar,cost_ey,k
-    close(9)
+    
     
     cost_zero=0.0d0
     
     !Benchmark economy
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
+     open(unit=9,file='b_bar_cost_comp.txt')
+        read(9,*)  b_bar,cost_ey,k
+    close(9)
     
     !Recover value function from benchmark model
     open(unit=9,file='v_ini.txt')
@@ -40,46 +42,39 @@ subroutine counterfactuals()
     !compute shares of (y,e,df)
     pr_betas_u=0.0d0
     do e_l=1,L_educ;do y_l=1,G_types;do df_l=1,G_DF
-        joint_pr(df_l,e_l,y_l)=exp((av_V_ini(df_l,e_l,y_l)-cost_ey(df_l,e_l,y_l))/k(df_l))/sum(exp((av_V_ini(df_l,:,:)-cost_ey(df_l,:,:))/k(df_l))) 
+        joint_pr(df_l,e_l,y_l)=exp((av_V_ini(df_l,e_l,y_l)-cost_ey(df_l,e_l,y_l))/k(df_l))/sum(exp((av_V_ini(df_l,:,:)-cost_ey(df_l,:,:))/k(df_l)))  
         print*,'df_l',df_l,'e_l',e_l,'y_l',y_l,joint_pr(df_l,e_l,y_l)
         if (df_l==1) then
             pr_betas_u(df_l)=pr_betas_u(df_l)+pr_betas(y_l,e_l)*fraction_types(e_l,y_l)*fraction_e(e_l)
         end if
     end do;end do;end do
-    pr_betas_u(2)=1.0d0-pr_betas_u(1) 
+    !pr_betas_u(2)=1.0d0-pr_betas_u(1) 
 
     
-    !simulate model to compute tax revenue
+    !simulate model to compute income tax revenue
     call compute_labor_income_revenue(joint_pr,G_benchmark,av_V_ini,cost_ey,counterfactual_table(1,:))
+    open(unit=9,file='benchmark.txt')
+    do df_l=1,G_df;do e_l=1,L_educ;do y_l=1,types
+        write(9,'(A4,I4,A4,I4,A4,I4,F20.3,F10.3,F10.3)'),'df_l',df_l,'e_l',e_l,'y_l',y_l,cost_ey(df_l,e_l,y_l),av_V_ini(df_l,e_l,y_l),joint_pr(df_l,e_l,y_l)
+    end do; end do;end do
+    close(9)
 
     
     !Counterfactual 1: no complementarities in costs
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
+    open(unit=9,file='b_bar_cost_no_comp.txt')
+        read(9,*)  b_bar,cost_zero,k_zero
+    close(9)
+    
     !Recover value function from benchmark model
     open(unit=9,file='v_ini.txt')
         read(9,*) av_V_ini
     close(9)
-    
-    !compute shares of (y,e,df)
-    do df_l=1,G_DF
-        do e_l=1,L_educ;do y_l=1,G_types   
-            y_d=0.0d0
-            e_d=0.0d0
-            y_d(y_l)=1.0d0
-            e_d(e_l)=1.0d0
-            X_t(:,e_l,y_l)=(/1.0d0, y_d(2:G_types), e_d(2:L_educ)/)
-        end do;end do
-        X_TX=matmul(reshape(X_t,(/K2,G_educ*G_types/)),transpose(reshape(X_t,(/K2,G_educ*G_types/))))
-        call inverse(X_TX,X_TX,K2)
-        beta=matmul(X_TX,matmul(reshape(X_t,(/K2,G_educ*G_types/)),reshape(cost_ey(df_l,:,:),(/G_educ*G_types,1/))))
-        do e_l=1,L_educ;do y_l=1,G_types   
-            cost_zero(df_l,e_l,y_l)=sum(X_t(:,e_l,y_l)*beta(:,1))
-        end do;end do
-    end do
+
     
     do e_l=1,L_educ;do y_l=1,G_types;do df_l=1,G_DF
-        joint_pr(df_l,e_l,y_l)=exp((av_V_ini(df_l,e_l,y_l)-cost_zero(df_l,e_l,y_l))/k(df_l))/sum(exp((av_V_ini(df_l,:,:)-cost_zero(df_l,:,:))/k(df_l)))  
+        joint_pr(df_l,e_l,y_l)=exp((av_V_ini(df_l,e_l,y_l)-cost_zero(df_l,e_l,y_l))/k_zero(df_l))/sum(exp((av_V_ini(df_l,:,:)-cost_zero(df_l,:,:))/k_zero(df_l)))  
     end do;end do;end do
 
     !simulate model to compute tax revenue
@@ -89,14 +84,19 @@ subroutine counterfactuals()
     
     !Counterfactual 2: US -> DNK
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    tau=0.305d0
-    lambda=1.015d0
-    lambda_max=1.2d0
-    lambda_min=0.8d0
-    G_new=0.9d0
-    do while (abs(G_new-G_benchmark)>1.0d0)
-        
-        call load_first_step_p()
+    
+    !tau=0.229954d0
+    !lambda_max=2.0d0!1.2d0
+    !lambda_min=0.897!0.8d0
+    !lambda=(lambda_min+lambda_max)/2.0d0
+    !G_new=0.9d0
+    !do while (abs(G_new-G_benchmark)>1.0d0)
+    income_grid(:,3,:,:,:,:)=income_grid(:,3,:,:,:,:)*0.8d0
+    !lambda=0.95d0
+    !tau=0.22d0
+    !call load_first_step_p()
+
+        !call load_first_step_p()
         call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)    
 
          !compute new shares of (y,e,df)
@@ -108,7 +108,6 @@ subroutine counterfactuals()
         call load_first_step_p()
         call compute_labor_income_revenue(joint_pr,G_new,av_V_ini,cost_ey,counterfactual_table(3,:))
         
-        
         if (G_new>G_benchmark) then
             lambda_min=lambda
         else
@@ -116,7 +115,7 @@ subroutine counterfactuals()
         end if
         lambda=(lambda_min+lambda_max)/2.0d0
         print*,lambda,lambda_min,lambda_max
-    end do
+    !end do
     
     open(unit=9,file='counterfactual.txt')
     do df_l=1,G_df;do e_l=1,L_educ;do y_l=1,types
@@ -142,7 +141,7 @@ subroutine compute_labor_income_revenue(joint_pr,G,av_V_ini,cost_ey,counterfactu
         real(DP),dimension(G_DF,G_educ,G_types),intent(in)::av_V_ini
         real(DP),dimension(6)::counterfactuals
         real(DP),intent(out)::G
-        integer,parameter::indv_sim2=100000
+        integer,parameter::indv_sim2=2000000
         double precision::u
         integer::h,t_l,ind,i_l,y,e,h2,pi_l,df,ts_l,pi_l2,pi_old,counter
         character::continue_k
@@ -301,7 +300,7 @@ subroutine compute_labor_income_revenue(joint_pr,G,av_V_ini,cost_ey,counterfactu
                     joint_pr_t(e,y,h,t_l)=joint_pr_t(e,y,h,t_l)+1.0d0
                     if (t_l<=T_R) then
                         counter=counter+1     
-                        panel_tax(counter)=income_tax(y,e,t_l,min(h,G_h),pi_l,ts_l)
+                        panel_tax(counter)=income_tax(y,e,t_l,min(h,G_h),pi_l,ts_l) !income_tax(y,e,t_l,h,pi_l,ts_l)
                         panel_income(counter)=gross_annual_income2(y,e,t_l,min(h,G_h),pi_l,ts_l)
                         if (panel_income(counter)==-9.0d0) then
                             print*,''
@@ -313,11 +312,12 @@ subroutine compute_labor_income_revenue(joint_pr,G,av_V_ini,cost_ey,counterfactu
             G=sum(panel_tax)/sum(counter_income)
             
             !Share college
-            counterfactuals(1)=sum(joint_pr(1,3,:)*pr_betas_u(1))+ sum(joint_pr(2,3,:)*pr_betas_u(2))
+            counterfactuals(1)=sum(joint_pr(1,3,:)*pr_betas_u(1))!+ sum(joint_pr(2,3,:)*pr_betas_u(2))
             !Share protective
-            counterfactuals(2)=sum(joint_pr(1,:,1)*pr_betas_u(1))+sum(joint_pr(2,:,1)*pr_betas_u(2))
+            counterfactuals(2)=sum(joint_pr(1,:,1)*pr_betas_u(1))!+sum(joint_pr(2,:,1)*pr_betas_u(2))
             !Av LE
-            counterfactuals(3)=sum((sum(joint_pr(1,:,:),2)*pr_betas_u(1)+sum(joint_pr(2,:,:),2)*pr_betas_u(2))*life_exp)-50.0d0 
+            counterfactuals(3)=sum((sum(joint_pr(1,:,:),2)*pr_betas_u(1))*life_exp)-50.0d0 !sum((sum(joint_pr(1,:,:),2)*pr_betas_u(1)+sum(joint_pr(2,:,:),2)*pr_betas_u(2))*life_exp)-50.0d0 
+            print*,'LE',life_exp
             !LE gradient
             counterfactuals(4)=life_exp(3)-life_exp(1)
             !Mean life-time utility
