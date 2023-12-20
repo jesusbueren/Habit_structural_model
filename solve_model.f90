@@ -61,14 +61,14 @@ subroutine solve_model(a_policy,VSL)
     a_policy=-9.0d0
     V=-9.0d0
     
-    print*,'Compute value of bequest'
+    !print*,'Compute value of bequest'
     V(:,1:T-1,G_h+1,:,:,:,:)=0.0d0
     do x_l=1,G_nkk;do t_l=1,T;do df_l=1,G_df
         V(x_l,:,G_h+1,:,:,:,:)=betas(df_l)**(T-t_l-1)*beq_fct((1.0d0+r)*a_grid(x_l))
         a_policy(:,T,:,:,:,:,:)=0.0d0
     end do;end do; end do
     
-    print*,'Started solving model'
+    !print*,'Started solving model'
     
     !$omp parallel default(shared) private(aux_a,aux_c,aux_v,x_l,t_l,h_l,pi_l,e_l,y_l,df_l,x_l2,a_l2,loc,loc2,ind,jumps,alpha,x_policy,u_md,dV_x2,V_x2,a_l_max,discard_points,x_star2,a_l1,alpha_right2,alpha_left2,x_policy_new,x_policy_s,a_grid_s,index_sort)
     !$omp  do collapse(2)
@@ -234,7 +234,7 @@ subroutine solve_model(a_policy,VSL)
                 end if
 
                 if (t_l==T_svl) then
-                    VSL(x_l,h_l,pi_l,e_l,y_l,df_l)=value_of_stat_life(a_grid(x_l),a_policy(x_l,t_l,h_l,pi_l,e_l,y_l,df_l),V(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l,df_l)
+                    VSL(x_l,h_l,pi_l,e_l,y_l,df_l)=value_of_stat_life(max(a_grid(x_l),c_floor),a_policy(x_l,t_l,h_l,pi_l,e_l,y_l,df_l),V(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l,df_l)
                 end if
             end do
             
@@ -260,7 +260,7 @@ subroutine solve_model(a_policy,VSL)
     !$omp end do
     !$omp end parallel 
     
-    print*,'Finished solving model'
+    !print*,'Finished solving model'
 
 end subroutine
     
@@ -545,6 +545,6 @@ FUNCTION value_of_stat_life (a_today,a_prime,FV,t_l,h_l,pi_l,e_l,y_l,df_l)
             end do;end do;end do;end do
         end if
             
-        value_of_stat_life=(betas(df_l)*ExpConVal_alive-betas(df_l)**(T-t_l)*ExpConVal_dead)/(1.0d0/n_bar(t_l)*(((a_today-a_prime)/n_bar(t_l))**(-RRA)))
+        value_of_stat_life=betas(df_l)*(ExpConVal_alive-ExpConVal_dead)/(1.0d0/n_bar(t_l)*(((a_today-a_prime)/n_bar(t_l))**(-RRA))) 
         
 END FUNCTION value_of_stat_life

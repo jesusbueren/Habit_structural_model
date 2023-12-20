@@ -72,14 +72,19 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
             y=-9
             call RANDOM_NUMBER(u)
             ind=1
-            do while (y==-9)
-                if (u(10,1)<sum(fraction_types(e,1:ind))) then 
-                    y=ind
-                else
-                    ind=ind+1
-                end if 
-            end do
-            
+            !do while (y==-9)
+            !    if (u(10,1)<sum(fraction_types(e,1:ind,reference_cohort))) then 
+            !        y=ind
+            !    else
+            !        ind=ind+1   
+            !    end if 
+            !end do
+            if (i_l<indv_sim/2)then
+                y=1
+            else
+                y=2
+            end if
+          
             !Sample Discount factor type given educ and health behavior
             call RANDOM_NUMBER(u)
             if (u(8,1)<pr_betas(y,e)) then
@@ -92,14 +97,14 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                 if (t_l==1) then
                     !Sample intial health given health behavior and education
                     ind=1
-                    h=-9
-                    do while (h==-9)
-                        if (u(9,t_l)<sum(fraction_h_ey(1:ind,e,y)))then
-                            h=ind
-                        else
-                            ind=ind+1
-                        end if
-                    end do
+                    h=1!-9
+                    !do while (h==-9)
+                    !    if (u(9,t_l)<sum(fraction_h_ey(1:ind,e,y)))then
+                    !        h=ind
+                    !    else
+                    !        ind=ind+1
+                    !    end if
+                    !end do
                     !Sample  medical shock from uncond distribution
                     ind=1
                     xi=-9

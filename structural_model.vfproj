@@ -37,22 +37,29 @@
 		<Filter Name="Header Files" Filter="fi;fd;h;inc">
 		<File RelativePath=".\calibrate_b_bar.f90"/>
 		<File RelativePath=".\counterfactual.f90"/>
+		<File RelativePath=".\cross_section_dim.f90"/>
+		<File RelativePath=".\direct_effect.f90"/>
 		<File RelativePath=".\discretize_shock.f90"/>
 		<File RelativePath=".\load_first_step_p.f90"/>
 		<File RelativePath=".\main.f90"/>
+		<File RelativePath=".\p2shock.f90"/>
 		<File RelativePath=".\simulate_model.f90"/>
 		<File RelativePath=".\SM_global_var.f90"/>
 		<File RelativePath=".\solve_and_simulate.f90"/>
 		<File RelativePath=".\solve_model.f90"/>
-		<File RelativePath="..\metric_model\transitions.f90"/>
-		<File RelativePath=".\welfare_analysis.f90"/></Filter>
+		<File RelativePath=".\time_series_dim.f90"/>
+		<File RelativePath="..\metric_model\transitions.f90"/></Filter>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
 		<File RelativePath=".\amoeba.f90"/>
+		<File RelativePath=".\brent.f90"/>
 		<File RelativePath="..\metric_model\global_var.f90"/>
 		<File RelativePath=".\index_bypack.f90"/>
+		<File RelativePath=".\linmin.f90"/>
 		<File RelativePath=".\locate.f90"/>
+		<File RelativePath=".\mnbrack.f90"/>
 		<File RelativePath=".\nr.f90"/>
 		<File RelativePath=".\nrutil.f90"/>
+		<File RelativePath=".\powell.f90"/>
 		<File RelativePath=".\sort.f90"/></Filter>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl"/></Files>
 	<Globals/></VisualStudioProject>

@@ -30,18 +30,25 @@ program main
 		        END FUNCTION func
 	        END INTERFACE
         end subroutine
+        function inverse_logistic_mapping(x, beta_min, beta_max) result(inverse_mapped_value)
+            use nrtype; use state_space_dim
+            implicit none
+                real(DP), intent(in) ::beta_min, beta_max
+                real(DP),dimension(G_DF), intent(in) :: x
+                real(DP),dimension(G_DF) :: inverse_mapped_value
+        end function inverse_logistic_mapping
     end interface
     
-    call load_first_step_p()
-
-
+    call load_first_step_p()    
+    
+    
     !Calibrate model by matching wealth profile
     !do p_l=1,PAR+1
-    !    p(p_l,:)=(/beq_cur_ini,c_floor_ini,beq_mu_ini/) 
+    !    p(p_l,:)=(/beq_cur_ini,c_floor_ini,beq_mu_ini,inverse_logistic_mapping(betas_ini, beta_min, beta_max)/) 
     !    if (p_l>1) then
-    !        p(p_l,p_l-1)=p(p_l,p_l-1)*0.95d0
+    !        p(p_l,p_l-1)=p(p_l,p_l-1)*0.9d0
     !    end if
-    !    p(p_l,:)=(/log(p(p_l,1)),log(p(p_l,2)),log(p(p_l,3))/) !log(p(p_l,1:2)/(1.0d0-p(p_l,1:2))),,log(p(p_l,6:PAR)/(1.0d0-p(p_l,6:PAR)))
+    !    p(p_l,:)=(/log(p(p_l,1)),log(p(p_l,2)),log(p(p_l,3)),p(p_l,4)/) 
     !    y(p_l)=obj_function(p(p_l,:))
     !    !pause
     !end do
@@ -50,9 +57,10 @@ program main
     !Calibrate b_bar to match the value statistical life of 4,000,000 for the average dropout
     call calibrate_b_bar()
     
-    
-    !call welfare_analysis()
-    !call counterfactuals()
+    !Decompositions
+    call cross_sectional_dim()
+    !call time_series_dim()
+
     
     
     
@@ -78,6 +86,16 @@ function obj_function(parameters)
     real(DP),dimension(G_educ,G_h,T)::delta_assets_data
     real(DP)::moment_data,moment_model
     character::end_k
+    interface
+        function logistic_mapping(beta, beta_min, beta_max) result(mapped_value)
+        use nrtype; use state_space_dim
+        implicit none
+            real(DP),dimension(G_DF), intent(in) :: beta
+            real(DP), intent(in) ::beta_min, beta_max
+            real(DP),dimension(G_DF) :: mapped_value
+            real(DP),dimension(G_DF) :: sigmoid_beta
+        end function logistic_mapping
+    end interface
     
     !Moments targetted
     open(unit=9,file=path//'metric_model\Results\wealth_moments_data.txt')
@@ -93,7 +111,7 @@ function obj_function(parameters)
         delta_assets_data(:,:,t_l52+(t_l-1)*2)=delta_assets_data_MA(:,:,t_l) 
     end do
 
-    !betas=1.0d0/(1.0d0 + exp(-parameters(1:2)))*(beta_max-beta_min)+ beta_min
+    betas=logistic_mapping(parameters(4:4+G_DF-1), beta_min, beta_max)
     beq_cur=exp(parameters(1))
     c_floor=exp(parameters(2))
     beq_mu=exp(parameters(3))
@@ -102,7 +120,7 @@ function obj_function(parameters)
     
     print*,'----------------------'
     print*,"Parameter"
-    print('(A20,<G_DF>F5.2)'),"beta",betas
+    print('(A20,<G_DF>F7.4)'),"beta",betas
     print('(A20,F10.2)'),"beq cur",beq_cur
     print('(A20,F10.2)'),"c floor",c_floor
     print('(A20,F10.2)'),"beq mu",beq_mu
@@ -113,19 +131,19 @@ function obj_function(parameters)
     !print('(A20,<9>F6.3)'),"pr low beta",pr_betas
     
     call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)
-    t_ini=5
+    t_ini=6
     t_final=T-5
     
     obj_function=0.0d0
     do e_l=1,G_educ;do y_l=1,G_types     
 
         obj_function=obj_function & !+sum(((asset_distribution(t_ini:t_final,e_l,y_l,1)-dist_assets_data(5,t_ini:t_final,1,y_l,e_l)))**2.0d0) & 
-                                 +sum(((asset_distribution(t_ini:t_final,e_l,y_l,2)-dist_assets_data(6,t_ini:t_final,1,y_l,e_l)))**2.0d0/dist_assets_data(6,t_ini:t_final,1,y_l,e_l)) !& 
+                                 +sum(((asset_distribution(t_ini:t_final,e_l,y_l,2)-dist_assets_data(6,t_ini:t_final,1,y_l,e_l)))**2.0d0) !& 
                                  !+sum(((asset_distribution(t_ini:t_final,e_l,y_l,3)-dist_assets_data(7,t_ini:t_final,1,y_l,e_l)))**2.0d0)    
             
             
         print('(I4,I4,<3>F20.2)'),e_l,y_l, & !sum(((asset_distribution(t_ini:t_final,e_l,y_l,1)-dist_assets_data(5,t_ini:t_final,1,y_l,e_l))/dist_assets_data(5,t_ini:t_final,1,y_l,e_l))**2.0d0), &
-                                     sum(((asset_distribution(t_ini:t_final,e_l,y_l,2)-dist_assets_data(6,t_ini:t_final,1,y_l,e_l)))**2.0d0/dist_assets_data(6,t_ini:t_final,1,y_l,e_l)) !, &
+                                     sum(((asset_distribution(t_ini:t_final,e_l,y_l,2)-dist_assets_data(6,t_ini:t_final,1,y_l,e_l)))**2.0d0) !, &
                                      !sum(((asset_distribution(t_ini:t_final,e_l,y_l,3)-dist_assets_data(7,t_ini:t_final,1,y_l,e_l))/dist_assets_data(7,t_ini:t_final,1,y_l,e_l))**2.0d0)
             
         !print*,dist_assets_data(6,t_ini:t_final,1,y_l,e_l)
@@ -148,12 +166,39 @@ function obj_function(parameters)
         close (9)
         close (10)
         open(unit=9,file='parameter.txt')
-            write(9,'(<PAR>F10.3,F20.5)'),c_floor,beq_cur,beq_mu,obj_function
+            write(9,'(<PAR>F10.3,F20.5)'),c_floor,beq_cur,beq_mu,betas,obj_function
         close (9)
     end if
     !pause
 
 end function  
+    
+    
+
+
+    function logistic_mapping(beta, beta_min, beta_max) result(mapped_value)
+    use nrtype; use state_space_dim
+    implicit none
+        real(DP),dimension(G_DF), intent(in) :: beta
+        real(DP), intent(in) ::beta_min, beta_max
+        real(DP),dimension(G_DF) :: mapped_value
+        real(DP),dimension(G_DF) :: sigmoid_beta
+
+        sigmoid_beta = 1.00d0/ (1.0d0 + exp(-beta))
+        mapped_value = beta_min + (beta_max - beta_min) * sigmoid_beta
+    end function logistic_mapping
+
+    function inverse_logistic_mapping(x, beta_min, beta_max) result(inverse_mapped_value)
+    use nrtype; use state_space_dim
+    implicit none
+        real(DP), intent(in) ::beta_min, beta_max
+        real(DP),dimension(G_DF), intent(in) :: x
+        real(DP),dimension(G_DF) :: inverse_mapped_value
+
+        inverse_mapped_value = -log((beta_max - x) / (x - beta_min))
+    end function inverse_logistic_mapping
+
+
     
 
     

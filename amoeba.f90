@@ -14,7 +14,7 @@
 		END FUNCTION func
 	END INTERFACE
 	INTEGER(I4B), PARAMETER :: ITMAX=5000
-	REAL(DP), PARAMETER :: TINY=1.0e-10
+	REAL(DP), PARAMETER :: TINY=1.0d-15
 	INTEGER(I4B) :: ihi,ndim
 	REAL(DP), DIMENSION(size(p,2)) :: psum
 	call amoeba_private

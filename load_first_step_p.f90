@@ -42,11 +42,11 @@ subroutine load_transitions_retirees()
         real(DP),dimension(covariates,clusters,L_gender,L_educ)::beta_h
         real(DP),dimension(covariates,clusters,L_gender,L_educ)::beta_d
         real(DP),dimension(clusters+1,clusters+1,generations,types,L_gender,L_educ)::H
-        integer::t_l,h_l,e_l
+        integer::t_l,h_l,e_l,c_l
         real(DP),dimension(G_h+1,G_types,G_educ)::pr_sr
-        real(DP),dimension(types,L_gender,L_educ,clusters+1)::LE
-        real(DP),dimension(generations,clusters,L_gender,L_educ,types,cohorts)::joint_yh
-        real(DP),dimension(generations,L_gender,L_educ,types,cohorts,iterations)::fraction_t
+        real(DP),dimension(types,L_gender,L_educ,clusters+1)::LE 
+        real(DP),dimension(generations,clusters,L_gender,L_educ,types,G_cohorts)::joint_yh
+        real(DP),dimension(generations,L_gender,L_educ,types,G_cohorts,iterations)::fraction_t
         real(DP),dimension(generations,G_h,L_gender,L_educ,types,iterations)::fraction_h
 
         open(unit=9,file=path_s//'c_tr.txt')
@@ -64,17 +64,28 @@ subroutine load_transitions_retirees()
                 read(9,'(F7.4)') fraction_h
         close(9)
         
-        fraction_types=sum(fraction_t(1,1,:,:,reference_cohort,:),3)/dble(iterations) 
-        do e_l=1,G_educ
-            fraction_types(e_l,:)=fraction_types(e_l,:)/sum(fraction_types(e_l,:)) 
+        do c_l=1,G_cohorts
+            fraction_types(:,:,c_l)=sum(fraction_t(1,1,:,:,c_l,:),3)/dble(iterations)
         end do
+        do c_l=1,G_cohorts;do e_l=1,G_educ
+            fraction_types(e_l,:,c_l)=fraction_types(e_l,:,c_l)/sum(fraction_types(e_l,:,c_l)) 
+        end do;end do
         fraction_h_ey=sum(fraction_h(1,:,1,:,:,:),4)/dble(iterations) 
         
-        if (reference_cohort==3) then
-            fraction_e=(/0.089d0,0.514d0,0.397d0/)
-        elseif (reference_cohort==4) then
-            fraction_e=(/0.085d0,0.550d0,0.365d0/)
+        print*,'adjust share of e across cohorts'
+        do c_l=1,G_cohorts
+            if (c_l==1) then !1910
+                fraction_e(:,1)=(/0.765d0,0.173d0,0.062d0/)
+            elseif (c_l==2) then !1930
+                fraction_e(:,2)=(/0.505d0,0.363d0,0.132d0/)
+            elseif (c_l==3) then !1950
+                fraction_e(:,3)=(/0.276d0,0.457d0,0.267d0/)
+            elseif (c_l==4) then !1970
+                fraction_e(:,4)=(/0.278d0,0.429d0,0.293d0/)
+            elseif (c_l==5) then !1990
+                fraction_e(:,5)=(/0.096d0,0.429d0,0.293d0/)
         end if
+        end do
     
     
         beta_h=sum(c_tr_all,5)/dble(iterations)
@@ -82,6 +93,7 @@ subroutine load_transitions_retirees()
         
         joint_yh=1.0d0
         call transitions(beta_h,beta_d,H,LE,joint_yh)
+        LE_sm=LE(:,1,:,:) 
         
         H_sm=H(:,:,2:generations,:,1,:) 
         
@@ -140,6 +152,9 @@ subroutine load_medical_expenses()
             m_grid(e_l,t_l,h_l,z_l)=exp(sum(X(:,1)*beta(:,1))+z)
         end do
     end do;end do;end do
+    
+    !tuition fees
+    m_grid(3,1:4,:,:)=m_grid(3,1:4,:,:)+tuition(reference_cohort)/4.0d0
 
 end subroutine
     
@@ -162,6 +177,15 @@ subroutine load_income_risk()
     real(DP),dimension(5,generations,clusters,L_educ,types)::labor_force_participation
     real(DP),dimension(5,generations,clusters,L_educ,types,2)::labor_force_participation_dynamic
     real(DP)::gross_annual_income
+    real(DP),dimension(9,36)::wage_premium_data
+    character (LEN=75) ::first_line
+    
+    
+    
+    !load wage premium relative to 2010
+    open(unit=9,file=path//'data\wage_premium.csv')
+            read(9,*) wage_premium_data 
+    close(9)
     
     !Labor force participation risk at age 25
     open(unit=9,file=path//'metric_model\Results\labor_force_participation.txt')
@@ -254,24 +278,29 @@ subroutine load_income_risk()
 
     income_grid=0.0d0
     do t_l=1,T_R;do y_l=1,G_types;do e_l=1,G_educ;do h_l=1,G_h;do z_l=1,G_PI;do z_l2=1,G_PI
+
 2        if (z_l<G_PI) then
-            age=first_age_sm+(t_l-1)*2-70 
+            age=first_age_sm+(t_l-1)*2-70
             z=mag_p(z_l,t_l,e_l)
             z2=mag_tr(z_l2,e_l)
             y_d=0.0d0
             y_d(y_l)=1.0d0
-            !reference_cohort
-            cohort_d(4)=1.0d0
-            X(:,1)=(/1.0_dp,dble(age),dble(age)**2.0d0,dble(age)**3.0d0,dble(h_l-1),dble(h_l-1)*dble(age)/)
-            gross_annual_income=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0 !beta(:,3)
-            gross_annual_income2(y_l,e_l,t_l,h_l,z_l,z_l2)=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0
-            taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=min(gross_annual_income,ss_bar)*2.0d0
 
+            X(:,1)=(/1.0_dp,dble(age),dble(age)**2.0d0,dble(age)**3.0d0,dble(h_l-1),dble(h_l-1)*dble(age)/)
+            
+            gross_annual_income=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0
+            if (reference_cohort==2)then
+                gross_annual_income=gross_annual_income*wage_premium_data(6+e_l,t_l)
+            elseif (reference_cohort==3)then 
+                gross_annual_income=gross_annual_income*wage_premium_data(6+e_l,t_l+7)
+            elseif (reference_cohort==4)then 
+                gross_annual_income=gross_annual_income*wage_premium_data(6+e_l,t_l+15)
+            end if
+            taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=min(gross_annual_income,ss_bar)*2.0d0
             income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=(min(gross_annual_income,av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau)) - tau_mcr*gross_annual_income-tau_ss*min(gross_annual_income,ss_bar))*2.0d0
             income_tax(y_l,e_l,t_l,h_l,z_l,z_l2)=gross_annual_income*2.0d0-min(gross_annual_income,av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau))*2.0d0
         else
             income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
-            gross_annual_income2(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
             taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
             income_tax(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
         end if
@@ -281,10 +310,11 @@ subroutine load_income_risk()
         end if
     end do;end do;end do;end do;end do;end do
     
-    !print*,'chg this!!' gross_annual_income2(3,3,10,:,5,5)
-    !income_grid(:,3,:,:,:,:)=income_grid(:,3,:,:,:,:)*1.5d0
-
     call compute_pension()
+    
+    
+        
+        
     
 !income_grid(1,3,:,1,3,3)
 end subroutine load_income_risk
@@ -292,7 +322,7 @@ end subroutine load_income_risk
 subroutine compute_pension()
     use nrtype;use state_space_dim;use var_first_step
         implicit none
-        integer,parameter::indv_sim_p=100000
+        integer,parameter::indv_sim_p=500000
         double precision::u
         integer::h,t_l,ind,i_l,y,e,h2,pi_l,df,ts_l,pi_l2,pi_old
         character::continue_k
@@ -305,8 +335,10 @@ subroutine compute_pension()
         real(DP),dimension(T,G_educ,G_types)::av_income_panel,std_income
         real(DP),dimension(T_R,G_educ,G_types)::pr_unemployed,pr_bh
         real(DP)::aime,pia,coeff
+        character(len=1)::reference_cohort_s,e_s
+        integer(8),dimension(1)::seed=321
         
-        open(unit=9,file='wages.txt')
+        
         
         pr_unemployed=0.0d0
         df=G_DF
@@ -422,11 +454,9 @@ subroutine compute_pension()
                         exit
                     end if
                     
-
                     counter_income(t_l)=counter_income(t_l)+1
-                    panel_income(counter_income(t_l),t_l)=income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l) !gross_earnings(t_l) 
+                    panel_income(counter_income(t_l),t_l)=income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l) !
 
-            
                     if (t_l<=T_R) then
                         if (h==1 .and. pi_old<G_PI .and. pi_old>0) then
                             counter_un(t_l)=counter_un(t_l)+1
@@ -466,7 +496,7 @@ subroutine compute_pension()
                 PI_grid(pi_l,e,y)=sum(pension(1:counter(pi_l),pi_l))/dble(counter(pi_l))
             end do
             do t_l=1,T
-                av_income_panel(t_l,e,y)=sum(panel_income(1:counter_income(t_l),t_l))/dble(counter_income(t_l)) 
+                av_income_panel(t_l,e,y)=sum(panel_income(1:counter_income(t_l),t_l))/dble(counter_income(t_l)) !av_income_panel(:,1,1)
                 std_income(t_l,e,y)=sqrt(sum((panel_income(1:counter_income(t_l),t_l)-av_income_panel(t_l,e,y))**2.0d0)/dble(counter_income(t_l)-1))
                 if (t_l<=T_R) then
                     pr_unemployed(t_l,e,y)=pr_unemployed(t_l,e,y)/dble(counter_un(t_l)) 
@@ -474,7 +504,16 @@ subroutine compute_pension()
                 end if             
             end do
         end do;end do
-!av_income_panel(:,1,1) av_income_panel(:,:,1)  std_income(:,:,1)
+        
+        write (reference_cohort_s, '(I1)') reference_cohort
+        
+
+        open(unit=9,file='mean_income_c_'//reference_cohort_s//'.txt')
+        do t_l=1,T
+            write(9,'(I2,<G_educ>F8.2)'),t_l,av_income_panel(t_l,1,1),av_income_panel(t_l,2,1),av_income_panel(t_l,3,1)
+        end do
+        close(9)       
+
 end subroutine  
 
     

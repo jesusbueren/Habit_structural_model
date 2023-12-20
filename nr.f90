@@ -381,14 +381,14 @@ MODULE nr
 	INTERFACE
 		FUNCTION brent(ax,bx,cx,func,tol,xmin)
 		USE nrtype
-		REAL(SP), INTENT(IN) :: ax,bx,cx,tol
-		REAL(SP), INTENT(OUT) :: xmin
-		REAL(SP) :: brent
+		REAL(DP), INTENT(IN) :: ax,bx,cx,tol
+		REAL(DP), INTENT(OUT) :: xmin
+		REAL(DP) :: brent
 		INTERFACE
 			FUNCTION func(x)
 			USE nrtype
-			REAL(SP), INTENT(IN) :: x
-			REAL(SP) :: func
+			REAL(DP), INTENT(IN) :: x
+			REAL(DP) :: func
 			END FUNCTION func
 		END INTERFACE
 		END FUNCTION brent
@@ -1484,8 +1484,8 @@ MODULE nr
 	INTERFACE
 		SUBROUTINE linmin(p,xi,fret)
 		USE nrtype
-		REAL(SP), INTENT(OUT) :: fret
-		REAL(SP), DIMENSION(:), TARGET, INTENT(INOUT) :: p,xi
+		REAL(DP), INTENT(OUT) :: fret
+		REAL(DP), DIMENSION(:), TARGET, INTENT(INOUT) :: p,xi
 		END SUBROUTINE linmin
 	END INTERFACE
 	INTERFACE
@@ -1686,13 +1686,13 @@ MODULE nr
 	INTERFACE
 		SUBROUTINE mnbrak(ax,bx,cx,fa,fb,fc,func)
 		USE nrtype
-		REAL(SP), INTENT(INOUT) :: ax,bx
-		REAL(SP), INTENT(OUT) :: cx,fa,fb,fc
+		REAL(DP), INTENT(INOUT) :: ax,bx
+		REAL(DP), INTENT(OUT) :: cx,fa,fb,fc
 		INTERFACE
 			FUNCTION func(x)
 			USE nrtype
-			REAL(SP), INTENT(IN) :: x
-			REAL(SP) :: func
+			REAL(DP), INTENT(IN) :: x
+			REAL(DP) :: func
 			END FUNCTION func
 		END INTERFACE
 		END SUBROUTINE mnbrak
