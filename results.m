@@ -187,10 +187,11 @@ G_cohorts=2;
 data_mat=data.data;
 data_mat=reshape(data_mat(:,2:5),type_y,3,G_cohorts,G_df,4);
 
-(data_mat(1,3,1,1,2)-data_mat(2,3,1,1,2))
-(data_mat(1,2,1,1,2)-data_mat(2,2,1,1,2))
-(data_mat(1,1,1,1,2)-data_mat(2,1,1,1,2))
-(data_mat(1,3,2,1,2)-data_mat(2,3,2,1,2))-(data_mat(1,1,2,1,2)-data_mat(2,1,2,1,2))
+(data_mat(1,1,1,1,2)-data_mat(2,1,1,1,2))-((data_mat(1,1,2,1,2)-data_mat(2,1,2,1,2)))
+
+(data_mat(1,3,1,1,2)-data_mat(2,3,1,1,2))-((data_mat(1,3,2,1,2)-data_mat(2,3,2,1,2)))
+
+
 
 (data_mat(1,3,1,1,2)-data_mat(1,1,1,1,2))/(data_mat(1,2,1,1,2)-data_mat(1,1,1,1,2))
 
@@ -255,7 +256,7 @@ end
 print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\stage1_',num2str(j)),'-depsc')
 end
 end
-%%
+
 
 df_l=1
 for c_l=1:G_cohorts
@@ -283,7 +284,7 @@ elseif c_l==3
 elseif c_l==4
     title('Born in 1970')
 end
-ylim([0,0.7])
+ylim([0,1])
 set(gcf,'color','w')
 end
 print('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\stage1_pr_y_e','-depsc')

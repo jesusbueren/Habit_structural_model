@@ -63,7 +63,7 @@ end module
 module second_step
     use nrtype; use state_space_dim
     implicit none
-    integer::PAR_2=6,counterfactual=0,DGP_sim=0
+    integer::PAR_2=5,counterfactual=0,DGP_sim=0
     real(dp),dimension(G_df)::pr_beta_un
     real(DP),dimension(G_df,G_educ,G_types,G_cohorts)::joint_pr
     real(DP),dimension(G_df,G_educ,G_types)::av_V_ini  

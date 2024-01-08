@@ -7,7 +7,7 @@ subroutine direct_effect(parameters_in,parameters_out,V_in,V_out)
     integer,dimension(3)::maxloc_U
     real(DP)::sigma_hs,sigma_cg,sigma_y
     real(DP)::eps_pro,eps_hs,eps_col,eps_01_hs,eps_01_col
-    real(DP)::rho_ey
+    real(DP),dimension(2)::rho_ey
     integer:: e_l,y_l,df_l,i_l
     integer(8),dimension(1)::seed=321
     real(DP),dimension(G_educ)::cost_e    
@@ -20,7 +20,8 @@ subroutine direct_effect(parameters_in,parameters_out,V_in,V_out)
             implicit none
             real(DP),dimension(:),intent(in)::parameters    
             real(DP),dimension(G_df,G_educ,G_types),intent(out)::cost_ey
-            real(DP),intent(out)::sigma_hs,sigma_cg,sigma_y,rho_ey
+            real(DP),intent(out)::sigma_hs,sigma_cg,sigma_y
+            real(DP),dimension(2),intent(out)::rho_ey
         end subroutine
     end interface
 
@@ -35,7 +36,7 @@ subroutine direct_effect(parameters_in,parameters_out,V_in,V_out)
     
     do i_l=1,500000
         !Best option for the individual with parameters_in and V_in 
-        call input2p(parameters_in(1:6),cost_ey,sigma_y,sigma_hs,sigma_cg,rho_ey)
+        call input2p(parameters_in(1:5),cost_ey,sigma_y,sigma_hs,sigma_cg,rho_ey)
         call random_seed(GET=seed)
         call p2shock(sigma_y,sigma_hs,sigma_cg,rho_ey,rand_ey)
         U=V_in-cost_ey+rand_ey  
