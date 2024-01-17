@@ -139,12 +139,10 @@ subroutine calibrate_b_bar()
     !Estimate costs:
     !!!!!!!!!!!!!!!!    
     
-    p_g(1,1:3)=(/log(15.47d0),log(10.11d0),log(29.61d0)/) !av cost of protective, High-school, College   1M(/log(6.42d0),log(6.0d0),log(24.6d0)/)
-    p_g(1,4:6)=(/8.63d0,8.63d0,8.63d0/)!Variance of shock of behavior, education  1M(/167.0d0,100.0d0,65.45d0/)
+    p_g(1,1:3)=(/log(14.5d0),log(10.95d0),log(30.8d0)/) !av cost of protective, High-school, College   1M(/log(6.42d0),log(6.0d0),log(24.6d0)/)
+    p_g(1,4:6)=(/13.4d0,2.08d0,4.31d0/) !scale of shocks
     p_g(1,4:6)=log(p_g(1,4:6))
-    !p_g(1,9:10)=0.55d0
-    !p_g(1,9:10)=log(p_g(1,9:10)/(1.0d0-p_g(1,9:10)))
-    !
+
     it=0
 
 1    do p_l=1,PAR_2+1
@@ -207,45 +205,32 @@ function obj_function_costs(parameters)
     real(DP),dimension(G_df,G_educ,G_types)::rand_ey,U
     integer,dimension(3)::maxloc_U
     real(DP)::obj_function_costs
-    real(DP)::sigma_hs,sigma_cg,sigma_nu,rho_hs_cg
-    real(DP),dimension(3)::sigma_y
-    real(DP),dimension(2)::rho_ey
+    real(DP),dimension(2)::gumbel_y,gumbel_hs,gumbel_cg
     real(DP)::rho_cghs
     real(DP),dimension(G_df,G_educ,G_types)::cost_ey
     integer:: e_l,y_l,df_l,i_l,c_l
     integer(8),dimension(1)::seed=321
     interface
-        subroutine input2p(parameters,cost_ey,sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg)
+        subroutine input2p(parameters,cost_ey,gumbel_y,gumbel_hs,gumbel_cg)
             use nrtype; use state_space_dim
             implicit none
             real(DP),dimension(:),intent(in)::parameters
             real(DP),dimension(G_df,G_educ,G_types),intent(out)::cost_ey
-            real(DP),intent(out)::sigma_hs,sigma_cg,sigma_nu,rho_hs_cg
-            real(DP),dimension(3),intent(out)::sigma_y
-            real(DP),dimension(2),intent(out)::rho_ey
+            real(DP),dimension(2),intent(out)::gumbel_y,gumbel_hs,gumbel_cg
         end subroutine
     end interface
     
     !print*,parameters
 
-    
 
-    
-    
-    
     call random_seed(PUT=seed)
     joint_pr_model=0.0d0
     !open(unit=9,file='eps.txt')
+    call input2p(parameters,cost_ey,gumbel_y,gumbel_hs,gumbel_cg)
+    print '(A20,<10>F10.2)','parameters P',cost_ey(1,1,1),cost_ey(1,2,2),cost_ey(1,3,2),gumbel_y,gumbel_hs,gumbel_cg
     do c_l=2,G_cohorts-1,2
-        if (c_l==2)then
-            call input2p((/parameters(1:PAR_2)/),cost_ey,sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg)
-            print '(A20,<10>F10.2)','parameters P',cost_ey(1,1,1),cost_ey(1,2,2),cost_ey(1,3,2),sigma_y(1),sigma_hs,sigma_cg,sigma_nu
-        else
-            call input2p((/parameters(1:PAR_2)/),cost_ey,sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg)
-            !print '(A20,<10>F10.2)','parameters P',cost_ey(1,1,1),cost_ey(1,2,2),cost_ey(1,3,2),sigma_y,sigma_hs,sigma_cg,rho_ey
-        end if
         do i_l=1,200000
-        call p2shock(sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg,rand_ey)
+        call p2shock(gumbel_y,gumbel_hs,gumbel_cg,rand_ey)
         U=av_V_ini_all(:,:,:,c_l)-cost_ey+rand_ey 
         maxloc_U=maxloc(U)
         joint_pr_model(maxloc_U(1),maxloc_U(2),maxloc_U(3),c_l)=joint_pr_model(maxloc_U(1),maxloc_U(2),maxloc_U(3),c_l)+1.0d0 
@@ -307,15 +292,12 @@ function obj_function_costs(parameters)
     
     end function
     
-    subroutine input2p(parameters,cost_ey,sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg)
+    subroutine input2p(parameters,cost_ey,gumbel_y,gumbel_hs,gumbel_cg)
         use nrtype; use state_space_dim
         implicit none
         real(DP),dimension(:),intent(in)::parameters
         real(DP),dimension(G_df,G_educ,G_types),intent(out)::cost_ey
-        real(DP),intent(out)::sigma_hs,sigma_cg,sigma_nu,rho_hs_cg
-         real(DP),dimension(3),intent(out)::sigma_y
-        real(DP),dimension(2),intent(out)::rho_ey
-
+        real(DP),dimension(2),intent(out)::gumbel_y,gumbel_hs,gumbel_cg
         real(DP),dimension(G_educ)::cost_e    
         real(DP),dimension(G_types)::cost_y
         integer:: y_l,e_l,df_l
@@ -326,16 +308,15 @@ function obj_function_costs(parameters)
         cost_e(2)=exp(parameters(2))
         cost_e(3)=exp(parameters(3))
     
-        sigma_y=exp(parameters(4))
-        sigma_hs=exp(parameters(5))
-        sigma_cg=exp(parameters(6))
-        sigma_nu=0.0d0! exp(parameters(5))
+        !Location
+        gumbel_y(1)=0.0d0
+        gumbel_hs(1)=0.0d0
+        gumbel_cg(1)=0.0d0
         
-        rho_ey=0.0d0 !exp(parameters(9:10))/(1.0d0+exp(parameters(9:10)))
-        rho_hs_cg=0.0d0
-
-    
-    !print '(A20,<7>F10.2)','parameters P',cost_y(1),cost_e(2),cost_e(3),sigma_y,sigma_hs,sigma_cg,rho_ey
+        !Scale
+        gumbel_y(2)=exp(parameters(4))
+        gumbel_hs(2)=exp(parameters(5))
+        gumbel_cg(2)=exp(parameters(6))
     
         do df_l=1,G_df;do e_l=1,G_educ;do y_l=1,G_types
             cost_ey(df_l,e_l,y_l)=cost_e(e_l)+cost_y(y_l)

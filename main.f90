@@ -58,7 +58,7 @@ program main
     call calibrate_b_bar()
     
     !Decompositions
-    !call cross_sectional_dim()
+    call cross_sectional_dim()
     !call time_series_dim()
 
     
