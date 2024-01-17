@@ -46,7 +46,7 @@ subroutine cross_sectional_dim()
     
     
    open(unit=9,file='parameter.txt')
-        read(9,*) c_floor,beq_cur,beq_mu,betas
+        read(9,*) c_floor,beq_cur,beq_mu
     close (9)
     
     open(unit=9,file='b_bar_cost.txt')
@@ -91,74 +91,74 @@ subroutine cross_sectional_dim()
         write(unit_c(c_l2),'(A25,F23.1,A2,F23.1,A2,F23.1,A10)'),'Benchmark &',joint_pr_model(1,1,2,c_l)/sum(joint_pr_model(1,1,:,c_l))*100.0d0,'&',joint_pr_model(1,3,2,c_l)/sum(joint_pr_model(1,3,:,c_l))*100.0d0,'&',sum(joint_pr_model(1,3,:,c_l)/sum(joint_pr_model(1,3,:,c_l))*LE_sm(:,3,3))-sum(joint_pr_model(1,1,:,c_l)/sum(joint_pr_model(1,1,:,c_l))*LE_sm(:,1,3)),'\\[5pt]'
     end do
     
-    !! 1. No correlation 
-    counterfactual=1
-    open(unit=9,file='parameters_first_stage.txt')
-        read(9,*) p_fs
-    close(9)
-    open(unit=9,file='v_ini.txt')
-        read(9,*) av_V_ini_all 
-    close(9)
-    !p_fs(7:8)=-1.0/0.0d0
-    
-    smthg=obj_function_costs(p_fs)
-    do c_l2=1,2
-        c_l=cohort_v(c_l2)
-        print'(A25,F25.3,F25.3,F25.3)','No correlation',joint_pr_model(1,1,2,c_l)/sum(joint_pr_model(1,1,:,c_l)),joint_pr_model(1,3,2,c_l)/sum(joint_pr_model(1,3,:,c_l)),sum(joint_pr_model(1,3,:,c_l)/sum(joint_pr_model(1,3,:,c_l))*LE_sm(:,3,3))-sum(joint_pr_model(1,1,:,c_l)/sum(joint_pr_model(1,1,:,c_l))*LE_sm(:,1,3))
-        write(unit_c(c_l2),'(A50,F23.1,A2,F23.1,A2,F23.1,A10)'),'\bluetext{$\rho^c_{\textsc{pro},\text{e}}=0$} &',joint_pr_model(1,1,2,c_l)/sum(joint_pr_model(1,1,:,c_l))*100.0d0,'&',joint_pr_model(1,3,2,c_l)/sum(joint_pr_model(1,3,:,c_l))*100.0d0,'&',sum(joint_pr_model(1,3,:,c_l)/sum(joint_pr_model(1,3,:,c_l))*LE_sm(:,3,3))-sum(joint_pr_model(1,1,:,c_l)/sum(joint_pr_model(1,1,:,c_l))*LE_sm(:,1,3)),'\\[5pt]'
-    end do
+    !!! 1. No correlation 
+    !counterfactual=1
+    !open(unit=9,file='parameters_first_stage_prem.txt')
+    !    read(9,*) p_fs
+    !close(9)
+    !open(unit=9,file='v_ini.txt')
+    !    read(9,*) av_V_ini_all 
+    !close(9)
+    !p_fs(7:10)=-1.0/0.0d0
+    !
+    !smthg=obj_function_costs(p_fs)
+    !do c_l2=1,2
+    !    c_l=cohort_v(c_l2)
+    !    print'(A25,F25.3,F25.3,F25.3)','No correlation',joint_pr_model(1,1,2,c_l)/sum(joint_pr_model(1,1,:,c_l)),joint_pr_model(1,3,2,c_l)/sum(joint_pr_model(1,3,:,c_l)),sum(joint_pr_model(1,3,:,c_l)/sum(joint_pr_model(1,3,:,c_l))*LE_sm(:,3,3))-sum(joint_pr_model(1,1,:,c_l)/sum(joint_pr_model(1,1,:,c_l))*LE_sm(:,1,3))
+    !    write(unit_c(c_l2),'(A50,F23.1,A2,F23.1,A2,F23.1,A10)'),'\bluetext{$\rho^c_{\textsc{pro},\text{e}}=0$} &',joint_pr_model(1,1,2,c_l)/sum(joint_pr_model(1,1,:,c_l))*100.0d0,'&',joint_pr_model(1,3,2,c_l)/sum(joint_pr_model(1,3,:,c_l))*100.0d0,'&',sum(joint_pr_model(1,3,:,c_l)/sum(joint_pr_model(1,3,:,c_l))*LE_sm(:,3,3))-sum(joint_pr_model(1,1,:,c_l)/sum(joint_pr_model(1,1,:,c_l))*LE_sm(:,1,3)),'\\[5pt]'
+    !end do
     
     
     !! 2. Same income
-    counterfactual=2
-    reference_cohort=2
-    call load_income_risk() !college premium
-    call load_medical_expenses() !adjust tuition
-    income_store=income_grid
-    income_grid(:,3,:,:,:,:)=income_grid(:,1,:,:,:,:)
-    income_grid(:,2,:,:,:,:)=income_grid(:,1,:,:,:,:)
-    PI_grid(:,3,:)=PI_grid(:,1,:)
-    PI_grid(:,2,:)=PI_grid(:,1,:)
-    Pi_p(:,:,:,:,3)=Pi_p(:,:,:,:,1)
-    Pi_p(:,:,:,:,2)=Pi_p(:,:,:,:,1)
-    Pi_p_0(:,:,:,3)=Pi_p_0(:,:,:,1)
-    Pi_p_0(:,:,:,2)=Pi_p_0(:,:,:,1)
-    Pi_t(:,3)=Pi_t(:,1)
-    Pi_t(:,2)=Pi_t(:,1)
-    call solve_model(a_policy,VSL)
-    call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
-    av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
-    
-    reference_cohort=4
-    call load_income_risk() !college premium
-    call load_medical_expenses() !adjust tuition
-    income_store=income_grid
-    income_grid(:,3,:,:,:,:)=income_grid(:,1,:,:,:,:)
-    income_grid(:,2,:,:,:,:)=income_grid(:,1,:,:,:,:)
-    PI_grid(:,3,:)=PI_grid(:,1,:)
-    PI_grid(:,2,:)=PI_grid(:,1,:)
-    Pi_p(:,:,:,:,3)=Pi_p(:,:,:,:,1)
-    Pi_p(:,:,:,:,2)=Pi_p(:,:,:,:,1)
-    Pi_p_0(:,:,:,3)=Pi_p_0(:,:,:,1)
-    Pi_p_0(:,:,:,2)=Pi_p_0(:,:,:,1)
-    Pi_t(:,3)=Pi_t(:,1)
-    Pi_t(:,2)=Pi_t(:,1)
-    call solve_model(a_policy,VSL)
-    call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
-    av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
+    !counterfactual=2
+    !reference_cohort=2
+    !call load_income_risk() !college premium
+    !call load_medical_expenses() !adjust tuition
+    !income_store=income_grid
+    !income_grid(:,3,:,:,:,:)=income_grid(:,1,:,:,:,:)
+    !income_grid(:,2,:,:,:,:)=income_grid(:,1,:,:,:,:)
+    !PI_grid(:,3,:)=PI_grid(:,1,:)
+    !PI_grid(:,2,:)=PI_grid(:,1,:)
+    !Pi_p(:,:,:,:,3)=Pi_p(:,:,:,:,1)
+    !Pi_p(:,:,:,:,2)=Pi_p(:,:,:,:,1)
+    !Pi_p_0(:,:,:,3)=Pi_p_0(:,:,:,1)
+    !Pi_p_0(:,:,:,2)=Pi_p_0(:,:,:,1)
+    !Pi_t(:,3)=Pi_t(:,1)
+    !Pi_t(:,2)=Pi_t(:,1)
+    !call solve_model(a_policy,VSL)
+    !call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
+    !av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
+    !
+    !reference_cohort=4
+    !call load_income_risk() !college premium
+    !call load_medical_expenses() !adjust tuition
+    !income_store=income_grid
+    !income_grid(:,3,:,:,:,:)=income_grid(:,1,:,:,:,:)
+    !income_grid(:,2,:,:,:,:)=income_grid(:,1,:,:,:,:)
+    !PI_grid(:,3,:)=PI_grid(:,1,:)
+    !PI_grid(:,2,:)=PI_grid(:,1,:)
+    !Pi_p(:,:,:,:,3)=Pi_p(:,:,:,:,1)
+    !Pi_p(:,:,:,:,2)=Pi_p(:,:,:,:,1)
+    !Pi_p_0(:,:,:,3)=Pi_p_0(:,:,:,1)
+    !Pi_p_0(:,:,:,2)=Pi_p_0(:,:,:,1)
+    !Pi_t(:,3)=Pi_t(:,1)
+    !Pi_t(:,2)=Pi_t(:,1)
+    !call solve_model(a_policy,VSL)
+    !call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
+    !av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
 
     open(unit=9,file='v_I.txt')
-        write(9,*) av_V_ini_all 
+        read(9,*) av_V_ini_all 
     close(9)
-    pause
+    !pause
     
-    call direct_effect(p_bk(1:6),p_bk(1:6),av_V_bk(:,:,:,2),av_V_ini_all(:,:,:,2))    
-    
-    
+    call direct_effect(p_bk(1:8),p_bk(1:8),av_V_bk(:,:,:,2),av_V_ini_all(:,:,:,2))    
     
     
     
-    pause
+    
+    
+    !pause
     open(unit=9,file='parameters_first_stage.txt')
         read(9,*) p_fs
     close(9)
@@ -170,28 +170,35 @@ subroutine cross_sectional_dim()
         write(unit_c(c_l2),'(A140,F23.1,A2,F23.1,A2,F23.1,A10)'),'\bluetext{$w^{\textsc{cg}}_t=w^{\textsc{hsd}}_t$} &',joint_pr_model(1,1,2,c_l)/sum(joint_pr_model(1,1,:,c_l))*100.0d0,'&',joint_pr_model(1,3,2,c_l)/sum(joint_pr_model(1,3,:,c_l))*100.0d0,'&',sum(joint_pr_model(1,3,:,c_l)/sum(joint_pr_model(1,3,:,c_l))*LE_sm(:,3,3))-sum(joint_pr_model(1,1,:,c_l)/sum(joint_pr_model(1,1,:,c_l))*LE_sm(:,1,3)),'\\[5pt]'
     end do
 
-    
+    !pause
     !! 3. Same health transitions
-    counterfactual=3
-    H_store=H_sm
-    H_sm(:,:,:,:,3)=H_sm(:,:,:,:,1)
-    H_sm(:,:,:,:,2)=H_sm(:,:,:,:,1)
-    reference_cohort=2
-    call load_income_risk() !college premium
-    call load_medical_expenses() !adjust tuition
-    call solve_model(a_policy,VSL)
-    call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
-    av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
+    !counterfactual=3
+    !H_store=H_sm
+    !H_sm(:,:,:,:,3)=H_sm(:,:,:,:,1)
+    !H_sm(:,:,:,:,2)=H_sm(:,:,:,:,1)
+    !reference_cohort=2
+    !call load_income_risk() !college premium
+    !call load_medical_expenses() !adjust tuition
+    !call solve_model(a_policy,VSL)
+    !call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
+    !av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
+    !
+    !reference_cohort=4
+    !call load_income_risk() !college premium
+    !call load_medical_expenses() !adjust tuition
+    !call solve_model(a_policy,VSL)
+    !call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
+    !av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
     
-    reference_cohort=4
-    call load_income_risk() !college premium
-    call load_medical_expenses() !adjust tuition
-    call solve_model(a_policy,VSL)
-    call simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_delta) 
-    av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
+     open(unit=9,file='v_H.txt')
+        read(9,*) av_V_ini_all 
+    close(9)
+    
     open(unit=9,file='parameters_first_stage.txt')
         read(9,*) p_fs
     close(9)
+    
+    call direct_effect(p_bk(1:8),p_bk(1:8),av_V_bk(:,:,:,2),av_V_ini_all(:,:,:,2))  
 
     smthg=obj_function_costs(p_fs)
     

@@ -187,9 +187,20 @@ G_cohorts=2;
 data_mat=data.data;
 data_mat=reshape(data_mat(:,2:5),type_y,3,G_cohorts,G_df,4);
 
-(data_mat(1,1,1,1,2)-data_mat(2,1,1,1,2))-((data_mat(1,1,2,1,2)-data_mat(2,1,2,1,2)))
+e_l=1
+c_l=1
+df_l=1
+j=2
+data_mat(1,e_l,c_l,df_l,j)-data_mat(2,e_l,c_l,df_l,j)
+e_l=1
+c_l=2
+df_l=1
+j=2
+data_mat(1,e_l,c_l,df_l,j)-data_mat(2,e_l,c_l,df_l,j)
 
-(data_mat(1,3,1,1,2)-data_mat(2,3,1,1,2))-((data_mat(1,3,2,1,2)-data_mat(2,3,2,1,2)))
+% (data_mat(1,1,1,1,2)-data_mat(2,1,1,1,2))-((data_mat(1,1,2,1,2)-data_mat(2,1,2,1,2)))
+% 
+% (data_mat(1,3,1,1,2)-data_mat(2,3,1,1,2))-((data_mat(1,3,2,1,2)-data_mat(2,3,2,1,2)))
 
 
 
@@ -253,7 +264,7 @@ elseif j==2
 end
 set(gcf,'color','w')
 end
-print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\stage1_',num2str(j)),'-depsc')
+print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\stage1_',num2str(j)),'-depsc')
 end
 end
 
@@ -287,7 +298,7 @@ end
 ylim([0,1])
 set(gcf,'color','w')
 end
-print('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\stage1_pr_y_e','-depsc')
+print('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\stage1_pr_y_e','-depsc')
 
 
 df_l=1;
@@ -339,7 +350,7 @@ for c_l=1:G_cohorts
     set(gcf,'color','w');
 end
 
-print('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\stage1_pr_e','-depsc');
+print('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\stage1_pr_e','-depsc');
 
 
 
@@ -505,18 +516,30 @@ colors = { [0.4660    0.6740    0.1880]    [0.8500    0.3250    0.0980]  [0.9290
 
 FS=10
 G_educ=3
-benchmark=importdata('eps.txt');
-indv=500000
-benchmark=reshape(benchmark',4,indv,2);
+benchmark=importdata('eps_HSD.txt');
+[f,xi]=ksdensity(benchmark(:,3));
+figure(1)
+set(1,'position',[150    150    400    250])
+plot(xi,f,'Linewidth',2)
+xline(min(benchmark(benchmark(:,1)==1,3)),'-','Linewidth',2)
+xline(min(benchmark(benchmark(:,2)==1,3)),'--','Linewidth',2)
+legend('pdf ','1930','1970')
+xlim([-1.5 1.5])
+set(gca,'FontName','Times New Roman','FontSize',FS-2);
+set(gcf,'color','w')
+print('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\eps_pro_hsd','-depsc');
+
+
+%%
 
 c_l=1
 figure(1)
-for e_l=[1 3]
+
    subplot(1,2,min(e_l,2))
    for y_l=1:2
-    histogram(benchmark(1,(benchmark(2,:,c_l)==e_l &  benchmark(3,:,c_l)==y_l),c_l),-50:1:50,'FaceColor',colors{y_l})
+    
     if y_l==1
-       xline(min(benchmark(1,(benchmark(2,:,c_l)==e_l &  benchmark(3,:,c_l)==y_l),c_l)),'-','1930','Linewidth',2)
+       xline(min(benchmark((benchmark(2,:,c_l)==e_l &  benchmark(3,:,c_l)==y_l),c_l)),'-','1930','Linewidth',2)
        xline(min(benchmark(1,(benchmark(2,:,2)==e_l &  benchmark(3,:,2)==y_l),2)),'-','1970','Linewidth',2)
     end
     if e_l==1
@@ -530,7 +553,7 @@ for e_l=[1 3]
     set(gcf,'color','w')
    end
     xlim([-50 50])
-end
+
 
 
 %% Descriptive wages across cohorts

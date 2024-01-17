@@ -259,6 +259,7 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
        
                     V_i(df,y,counter(1,y,df))=V_i(df,y,counter(1,y,df))+betas(df)**(t_l-1)*u_fct((cash_on_hand-savings)*(1.0d0-lambda_c(e,y)),n_bar(t_l),h,y)
 
+
                     
                     if (isnan(V_i(df,y,counter(1,y,df)))) then
                         print*,''
@@ -304,6 +305,7 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                     else
                         av_V_ini(df,e,y)=-9.0d0
                     end if
+                    
                     !print '(A3,I2,A3,I2,A3,I2,A3,F7.4,A7,F7.2)','e=',e,';y=',y,';df=',df,';V=',av_V_ini(df),';av c=',av_c(df)
                 end do
             end if 

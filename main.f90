@@ -43,12 +43,12 @@ program main
     
     
     !Calibrate model by matching wealth profile
-    !do p_l=1,PAR+1
-    !    p(p_l,:)=(/beq_cur_ini,c_floor_ini,beq_mu_ini,inverse_logistic_mapping(betas_ini, beta_min, beta_max)/) 
+    !do p_l=1,par+1
+    !    p(p_l,:)=(/beq_cur_ini,c_floor_ini,beq_mu_ini/) !,inverse_logistic_mapping(betas_ini, beta_min, beta_max)
     !    if (p_l>1) then
     !        p(p_l,p_l-1)=p(p_l,p_l-1)*0.9d0
     !    end if
-    !    p(p_l,:)=(/log(p(p_l,1)),log(p(p_l,2)),log(p(p_l,3)),p(p_l,4)/) 
+    !    p(p_l,:)=(/log(p(p_l,1)),log(p(p_l,2)),log(p(p_l,3))/) !,p(p_l,4)
     !    y(p_l)=obj_function(p(p_l,:))
     !    !pause
     !end do
@@ -58,7 +58,7 @@ program main
     call calibrate_b_bar()
     
     !Decompositions
-    call cross_sectional_dim()
+    !call cross_sectional_dim()
     !call time_series_dim()
 
     
@@ -111,7 +111,7 @@ function obj_function(parameters)
         delta_assets_data(:,:,t_l52+(t_l-1)*2)=delta_assets_data_MA(:,:,t_l) 
     end do
 
-    betas=logistic_mapping(parameters(4:4+G_DF-1), beta_min, beta_max)
+    !betas=logistic_mapping(parameters(4:4+G_DF-1), beta_min, beta_max)
     beq_cur=exp(parameters(1))
     c_floor=exp(parameters(2))
     beq_mu=exp(parameters(3))
@@ -166,7 +166,7 @@ function obj_function(parameters)
         close (9)
         close (10)
         open(unit=9,file='parameter.txt')
-            write(9,'(<PAR>F10.3,F20.5)'),c_floor,beq_cur,beq_mu,betas,obj_function
+            write(9,'(<4>F10.3,F20.5)'),c_floor,beq_cur,beq_mu,betas,obj_function
         close (9)
     end if
     !pause

@@ -411,6 +411,7 @@ CONTAINS
 	SUBROUTINE nrerror(string)
 	CHARACTER(LEN=*), INTENT(IN) :: string
 	write (*,*) 'nrerror: ',string
+    pause
 	STOP 'program terminated by nrerror'
 	END SUBROUTINE nrerror
 !BL

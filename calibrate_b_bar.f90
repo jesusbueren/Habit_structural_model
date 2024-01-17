@@ -50,7 +50,7 @@ subroutine calibrate_b_bar()
     end interface
     
     open(unit=9,file='parameter.txt')
-        read(9,*) c_floor,beq_cur,beq_mu,betas,obj_function
+        read(9,*) c_floor,beq_cur,beq_mu
     close (9)
 
     print*,'----------------------'
@@ -60,6 +60,7 @@ subroutine calibrate_b_bar()
     print('(A20,F10.2)'),"c floor",c_floor
     print('(A20,F10.2)'),"beq mu",beq_mu
     print('(A20,<9>F6.3)'),"pr low beta",pr_betas
+    
 
 
     pr_beta_un(1)=1.0d0
@@ -73,8 +74,8 @@ subroutine calibrate_b_bar()
     b_bar_max=10.0d0
     it=0
     
-    !VSL_data=1000.0d0
-    b_bar=5.0d0 !3,5,8
+    VSL_data=3000.0d0
+    b_bar=1.0d0 !3,5,8
     !do while (abs(av_VSL(2)-VSL_data)>50.0d0 .and. it<10) 
     !    b_bar=(b_bar_max+b_bar_min)/2.0d0
     !    !Solve model
@@ -92,10 +93,10 @@ subroutine calibrate_b_bar()
         write(9,*)  b_bar
     close(9)
     
-    !Solve model for different cohorts
-    !av_V_ini_all=0.0d0
-    !av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
-    !
+    !!Solve model for different cohorts
+    av_V_ini_all=0.0d0
+    av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
+    
     !do c_l=2,G_cohorts-1,2
     !    reference_cohort=c_l
     !    call load_income_risk() !college premium
@@ -106,9 +107,11 @@ subroutine calibrate_b_bar()
     !end do
     !reference_cohort=2
     
+    
     open(unit=9,file='v_ini.txt')
         read(9,*) av_V_ini_all 
     close(9)
+
 
     
     do c_l=1,G_cohorts;do df_l=1,G_DF;do e_l=1,G_educ;do y_l=1,types
@@ -136,12 +139,12 @@ subroutine calibrate_b_bar()
     !Estimate costs:
     !!!!!!!!!!!!!!!!    
     
-    p_g(1,1:3)=(/log(40.5d0),log(13.2d0),log(40.5d0)/) !av cost of protective, High-school, College   1M(/log(6.42d0),log(6.0d0),log(24.6d0)/)
-    p_g(1,4:5)=(/100.0d0,100.0d0/) !Variance of shock of behavior, education  1M(/167.0d0,100.0d0,65.45d0/)
-    p_g(1,4:5)=log(p_g(1,4:5))
-    !p_g(1,6)=0.1d0
-    !p_g(1,6)=log(p_g(1,6)/(1.0d0-p_g(1,6)))
-    
+    p_g(1,1:3)=(/log(15.47d0),log(10.11d0),log(29.61d0)/) !av cost of protective, High-school, College   1M(/log(6.42d0),log(6.0d0),log(24.6d0)/)
+    p_g(1,4:6)=(/8.63d0,8.63d0,8.63d0/)!Variance of shock of behavior, education  1M(/167.0d0,100.0d0,65.45d0/)
+    p_g(1,4:6)=log(p_g(1,4:6))
+    !p_g(1,9:10)=0.55d0
+    !p_g(1,9:10)=log(p_g(1,9:10)/(1.0d0-p_g(1,9:10)))
+    !
     it=0
 
 1    do p_l=1,PAR_2+1
@@ -192,7 +195,7 @@ subroutine calibrate_b_bar()
 
   
    print*,'End optimization'
-!pause
+pause
 end subroutine  
     
     
@@ -204,39 +207,54 @@ function obj_function_costs(parameters)
     real(DP),dimension(G_df,G_educ,G_types)::rand_ey,U
     integer,dimension(3)::maxloc_U
     real(DP)::obj_function_costs
-    real(DP)::sigma_hs,sigma_cg,sigma_y
+    real(DP)::sigma_hs,sigma_cg,sigma_nu,rho_hs_cg
+    real(DP),dimension(3)::sigma_y
     real(DP),dimension(2)::rho_ey
     real(DP)::rho_cghs
     real(DP),dimension(G_df,G_educ,G_types)::cost_ey
     integer:: e_l,y_l,df_l,i_l,c_l
     integer(8),dimension(1)::seed=321
     interface
-        subroutine input2p(parameters,cost_ey,sigma_y,sigma_hs,sigma_cg,rho_ey)
+        subroutine input2p(parameters,cost_ey,sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg)
             use nrtype; use state_space_dim
             implicit none
             real(DP),dimension(:),intent(in)::parameters
             real(DP),dimension(G_df,G_educ,G_types),intent(out)::cost_ey
-            real(DP),intent(out)::sigma_hs,sigma_cg,sigma_y
+            real(DP),intent(out)::sigma_hs,sigma_cg,sigma_nu,rho_hs_cg
+            real(DP),dimension(3),intent(out)::sigma_y
             real(DP),dimension(2),intent(out)::rho_ey
         end subroutine
     end interface
     
     !print*,parameters
-    rho_ey=0.0d0
-    call input2p((/parameters(1:5)/),cost_ey,sigma_y,sigma_hs,sigma_cg,rho_ey)
 
     
-    print '(A20,<8>F10.2)','parameters P',cost_ey(1,1,1),cost_ey(1,2,2),cost_ey(1,3,2),sigma_y,sigma_hs,sigma_cg,rho_ey
+
+    
+    
     
     call random_seed(PUT=seed)
     joint_pr_model=0.0d0
-    do c_l=2,G_cohorts-1,2;do i_l=1,500000
-        call p2shock(sigma_y,sigma_hs,sigma_cg,rho_ey,rand_ey)
+    !open(unit=9,file='eps.txt')
+    do c_l=2,G_cohorts-1,2
+        if (c_l==2)then
+            call input2p((/parameters(1:PAR_2)/),cost_ey,sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg)
+            print '(A20,<10>F10.2)','parameters P',cost_ey(1,1,1),cost_ey(1,2,2),cost_ey(1,3,2),sigma_y(1),sigma_hs,sigma_cg,sigma_nu
+        else
+            call input2p((/parameters(1:PAR_2)/),cost_ey,sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg)
+            !print '(A20,<10>F10.2)','parameters P',cost_ey(1,1,1),cost_ey(1,2,2),cost_ey(1,3,2),sigma_y,sigma_hs,sigma_cg,rho_ey
+        end if
+        do i_l=1,200000
+        call p2shock(sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg,rand_ey)
         U=av_V_ini_all(:,:,:,c_l)-cost_ey+rand_ey 
         maxloc_U=maxloc(U)
         joint_pr_model(maxloc_U(1),maxloc_U(2),maxloc_U(3),c_l)=joint_pr_model(maxloc_U(1),maxloc_U(2),maxloc_U(3),c_l)+1.0d0 
+        !if (maxloc_U(2)==3) then
+        !    print*,''
+        !end if
+        !write(9,'(I3,I3,F10.3)'),c_l,maxloc_U(2),maxloc_U(3),rand_ey(1,1,1),log(rand_ey(1,2,2)),log(rand_ey(1,3,2))
     end do;end do
-
+    !close(9)
     do c_l=2,G_cohorts-1,2
         joint_pr_model(:,:,:,c_l)=joint_pr_model(:,:,:,c_l)/sum(joint_pr_model(:,:,:,c_l))      
     end do
@@ -260,14 +278,12 @@ function obj_function_costs(parameters)
     
     !Match pr(y=1|e)
     do df_l=1,G_df;do e_l=1,G_educ;do c_l=2,G_cohorts-1,2
-        if (e_l/=2) then
-            obj_function_costs=obj_function_costs+((joint_pr_model(df_l,e_l,1,c_l)/sum(joint_pr_model(df_l,e_l,:,c_l))-joint_pr(df_l,e_l,1,c_l)/sum(joint_pr(df_l,e_l,:,c_l))))**2.0d0
-        end if
+        obj_function_costs=obj_function_costs+((joint_pr_model(df_l,e_l,1,c_l)/sum(joint_pr_model(df_l,e_l,:,c_l))-joint_pr(df_l,e_l,1,c_l)/sum(joint_pr(df_l,e_l,:,c_l)))/(joint_pr(df_l,e_l,1,c_l)/sum(joint_pr(df_l,e_l,:,c_l))))**2.0d0
     end do;end do;end do
     
     !Match pr(e)
     do df_l=1,G_df;do e_l=2,G_educ;do c_l=2,G_cohorts-1,2
-        obj_function_costs=obj_function_costs+(sum(joint_pr_model(df_l,e_l,:,c_l))-sum(joint_pr(df_l,e_l,:,c_l)))**2.0d0
+        obj_function_costs=obj_function_costs+((sum(joint_pr_model(df_l,e_l,:,c_l))-sum(joint_pr(df_l,e_l,:,c_l)))/sum(joint_pr(df_l,e_l,:,c_l)))**2.0d0
     end do;end do;end do
     
     !Match pr(y)
@@ -278,21 +294,26 @@ function obj_function_costs(parameters)
 
     
     if (isnan(obj_function_costs))then
-        obj_function_costs=10.0d0
+        obj_function_costs=10000.0d0
     end if
     
     
     print*,obj_function_costs
+    
+    open(unit=9,file='parameters_first_stage_prem.txt')
+        write(9,*) parameters
+    close(9)
 
     
     end function
     
-    subroutine input2p(parameters,cost_ey,sigma_y,sigma_hs,sigma_cg,rho_ey)
+    subroutine input2p(parameters,cost_ey,sigma_y,sigma_hs,sigma_cg,sigma_nu,rho_ey,rho_hs_cg)
         use nrtype; use state_space_dim
         implicit none
         real(DP),dimension(:),intent(in)::parameters
         real(DP),dimension(G_df,G_educ,G_types),intent(out)::cost_ey
-        real(DP),intent(out)::sigma_hs,sigma_cg,sigma_y
+        real(DP),intent(out)::sigma_hs,sigma_cg,sigma_nu,rho_hs_cg
+         real(DP),dimension(3),intent(out)::sigma_y
         real(DP),dimension(2),intent(out)::rho_ey
 
         real(DP),dimension(G_educ)::cost_e    
@@ -307,9 +328,12 @@ function obj_function_costs(parameters)
     
         sigma_y=exp(parameters(4))
         sigma_hs=exp(parameters(5))
-        sigma_cg=exp(parameters(5))
-    
-        rho_ey=0.0d0!exp(parameters(6))/(1.0d0+exp(parameters(6)))
+        sigma_cg=exp(parameters(6))
+        sigma_nu=0.0d0! exp(parameters(5))
+        
+        rho_ey=0.0d0 !exp(parameters(9:10))/(1.0d0+exp(parameters(9:10)))
+        rho_hs_cg=0.0d0
+
     
     !print '(A20,<7>F10.2)','parameters P',cost_y(1),cost_e(2),cost_e(3),sigma_y,sigma_hs,sigma_cg,rho_ey
     

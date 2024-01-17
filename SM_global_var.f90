@@ -46,8 +46,8 @@ module preference_p
     real(DP)::beq_cur=100.0d0,c_floor=-9.0d0,beq_mu=0.0d0,best_obj_fct=1.0d0/0.0d0,delta_h=0.0d0,c_bar=0.0d0
     real(DP),dimension(G_h)::b_bar=0.0d0
     real(DP)::RRA_beq=RRA
-    integer,parameter::PAR=4
-    real(DP)::beta_max=1.0d0, beta_min=0.95d0
+    integer,parameter::PAR=3
+    real(DP)::beta_max=1.0d0, beta_min=0.9d0
 end module
     
 module initial_p
@@ -55,7 +55,7 @@ module initial_p
     implicit none
     !initial guess of parameters
     real(DP),dimension(G_DF)::betas_ini=0.98d0 !(/0.89d0,0.937d0/)
-    real(DP)::beq_cur_ini=100.76d0 ,c_floor_ini=5.8d0,beq_mu_ini=15.35d0,delta_h_ini=0.2d0
+    real(DP)::beq_cur_ini=100.76d0 ,c_floor_ini=5.8d0,beq_mu_ini=7.35d0,delta_h_ini=0.2d0
     real(DP),dimension(G_types,G_educ)::pr_betas_ini=1.0d0 !reshape((/0.511d0,0.575d0,0.518d0,0.385d0,0.552d0,0.566d0,0.263d0,0.597d0,0.614d0/),shape(pr_betas_ini))
 end module
     
@@ -63,7 +63,7 @@ end module
 module second_step
     use nrtype; use state_space_dim
     implicit none
-    integer::PAR_2=5,counterfactual=0,DGP_sim=0
+    integer::PAR_2=6,counterfactual=0,DGP_sim=0
     real(dp),dimension(G_df)::pr_beta_un
     real(DP),dimension(G_df,G_educ,G_types,G_cohorts)::joint_pr
     real(DP),dimension(G_df,G_educ,G_types)::av_V_ini  
