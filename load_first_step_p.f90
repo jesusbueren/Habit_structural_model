@@ -75,15 +75,15 @@ subroutine load_transitions_retirees()
         print*,'adjust share of e across cohorts'
         do c_l=1,G_cohorts
             if (c_l==1) then !1910
-                fraction_e(:,1)=(/0.765d0,0.173d0,0.062d0/)
+                fraction_e(:,1)=(/0.62d0,0.24d0,0.14d0/)
             elseif (c_l==2) then !1930
-                fraction_e(:,2)=(/0.505d0,0.363d0,0.132d0/)
+                fraction_e(:,2)=(/0.36d0,0.39d0,0.25d0/)
             elseif (c_l==3) then !1950
-                fraction_e(:,3)=(/0.276d0,0.457d0,0.267d0/)
+                fraction_e(:,3)=(/0.14d0,0.50d0,0.36d0/)
             elseif (c_l==4) then !1970
-                fraction_e(:,4)=(/0.278d0,0.429d0,0.293d0/)
+                fraction_e(:,4)=(/0.11d0,0.52d0,0.37d0/)
             elseif (c_l==5) then !1990
-                fraction_e(:,5)=(/0.096d0,0.429d0,0.293d0/)
+                fraction_e(:,5)=(/0.08d0,0.50d0,0.42d0/)
         end if
         end do
     
@@ -154,7 +154,7 @@ subroutine load_medical_expenses()
     end do;end do;end do
     
     !tuition fees
-    m_grid(3,1:4,:,:)=m_grid(3,1:4,:,:)+tuition(reference_cohort)/4.0d0
+    !m_grid(3,1:4,:,:)=m_grid(3,1:4,:,:)+tuition(reference_cohort)/4.0d0
 
 end subroutine
     
@@ -174,38 +174,30 @@ subroutine load_income_risk()
     real(DP),dimension(G_cohorts)::cohort_d
     integer::t_l,e_l,h_l,z_l,z_l2,y_l
     character::pause_k
-    real(DP),dimension(5,generations,clusters,L_educ,types)::labor_force_participation
-    real(DP),dimension(5,generations,clusters,L_educ,types,2)::labor_force_participation_dynamic
+
     real(DP)::gross_annual_income
-    real(DP),dimension(9,36)::wage_premium_data
+    real(DP),dimension(2,20,3,5)::wage_lf_profile
+    real(DP),dimension(4,20,3)::health_p
     character (LEN=75) ::first_line
     
     
-    
-    !load wage premium relative to 2010
-    open(unit=9,file=path//'data\wage_premium.csv')
-            read(9,*) wage_premium_data 
+    print*,T_R
+    !load wages & labor force participation for each cohort & education from census
+    open(unit=9,file=path//'data\lincome_lf.csv')
+            read(9,*) wage_lf_profile
     close(9)
     
-    !Labor force participation risk at age 25
-    open(unit=9,file=path//'metric_model\Results\labor_force_participation.txt')
-            read(9,*) labor_force_participation 
+    !Good/Bad health premium/penalty in income and labor supply across education from PSID
+    open(unit=9,file=path//'data\health_premium.csv')
+            read(9,*) health_p
     close(9)
-    print*,'cond on health, edu and age, labor force participation does not vary by type'
-    do t_l=1,T;do h_l=1,G_h;do e_l=1,G_educ
-        Pi_p_0(G_PI,t_l,h_l,e_l)=1.0d0-labor_force_participation(5,t_l,h_l,e_l,1)
+
+    do t_l=1,T_R;do h_l=1,G_h;do e_l=1,G_educ
+        Pi_un(t_l,h_l,e_l,2)=1.0d0-wage_lf_profile(2,t_l,e_l,reference_cohort)*health_p(2+h_l,t_l,e_l)
+        Pi_un(t_l,h_l,e_l,1)=1.0d0-Pi_un(t_l,h_l,e_l,2)
     end do;end do;end do
-    
-    !Labor force participation conditional previous labor force participation
-    open(unit=9,file=path//'metric_model\Results\labor_force_participation_dynamic.txt')
-            read(9,*) labor_force_participation_dynamic
-    close(9)
-    print*,'cond on health, edu and age, previous labor force participation does not vary by type'
-    Pi_p=-9.0d0
-    do t_l=1,T;do h_l=1,G_h;do e_l=1,G_educ
-        Pi_p(1:G_PI-1,G_PI,t_l,h_l,e_l)=1.0d0-labor_force_participation_dynamic(5,t_l,h_l,e_l,1,2) ! transition in the labor force -> out of the labor force 
-        Pi_p(G_PI,G_PI,t_l,h_l,e_l)=1.0d0-labor_force_participation_dynamic(5,t_l,h_l,e_l,1,1) ! transition out of the labor force -> out of the labor force 
-    end do;end do;end do
+!Pi_un(:,1,3)
+
 
     !Income risk for those being employed
     open(unit=9,file=path//'metric_model\Results\parameters_income.txt')
@@ -222,92 +214,37 @@ subroutine load_income_risk()
     do e_l=1,G_educ;do h_l=1,G_h
         var_aux=s2_0(e_l,1)
         t_l=1
-        call discretize_iid_shocks(var_aux,G_PI-1,mag_p(1:G_PI-1,t_l,e_l),Pi_p_0(1:G_PI-1,t_l,h_l,e_l))  !mag_p(1:9,t_l,e_l)
-        !correct for the pr of being unemployed
-        Pi_p_0(1:G_PI-1,t_l,h_l,e_l)=Pi_p_0(1:G_PI-1,t_l,h_l,e_l)/sum(Pi_p_0(1:G_PI-1,t_l,h_l,e_l))*(1.0d0-Pi_p_0(G_PI,t_l,h_l,e_l)) 
+        call discretize_iid_shocks(var_aux,G_PI,mag_p(1:G_PI,t_l,e_l),Pi_p_0(1:G_PI,t_l,h_l,e_l))  !mag_p(1:9,t_l,e_l)
         if (isnan(sum(Pi_p_0))) then
             print*,'pb 1'
         end if 
         do t_l=2,T
             var_aux=rho(e_l,1)**2*var_aux+s2_nu(e_l,1)
-1            call discretize_iid_shocks(var_aux,G_PI-1,mag_p(1:G_PI-1,t_l,e_l),Pi_p_0(1:G_PI-1,t_l,h_l,e_l))  
-            !correct for the pr of being unemployed
-            Pi_p_0(1:G_PI-1,t_l,h_l,e_l)=Pi_p_0(1:G_PI-1,t_l,h_l,e_l)/sum(Pi_p_0(1:G_PI-1,t_l,h_l,e_l))*(1.0d0-Pi_p_0(G_PI,t_l,h_l,e_l))
-            if (sum(Pi_p_0(1:G_PI,t_l,h_l,e_l))>1.01d0) then
-                print*,sum(Pi_p_0(1:G_PI,t_l,h_l,e_l))
-                go to 1
-            end if
-            if (isnan(sum(Pi_p_0))) then
-                print*,'pb 2'
-            end if 
+1            call discretize_iid_shocks(var_aux,G_PI,mag_p(1:G_PI,t_l,e_l),Pi_p_0(1:G_PI,t_l,h_l,e_l))  
         end do
-         
     end do;end do
 
 
     !Compute the transition probability of the persistent component cond on working
     do h_l=1,G_h;do e_l=1,G_educ;do t_l=1,T
-        call transition_pr(rho(e_l,1),s2_nu(e_l,1),G_PI-1,mag_p(1:G_PI-1,t_l,e_l),mag_p(1:G_PI-1,t_l+1,e_l),Pi_p(1:G_PI-1,1:G_PI-1,t_l,h_l,e_l)) 
-    end do;end do;end do
-
-    
-    !I need to adjust the pr of each persistent shock conditional on being in labor force so that from 1 to G_PI they sum to 1
-    !I need to include the pr of moving to employment from unemployment
-    do t_l=1,T-1;do h_l=1,G_h;do e_l=1,G_educ;do z_l=1,G_PI
-        if (z_l<G_PI) then
-            Pi_p(z_l,1:G_PI-1,t_l,h_l,e_l)=Pi_p(z_l,1:G_PI-1,t_l,h_l,e_l)/sum(Pi_p(z_l,1:G_PI-1,t_l,h_l,e_l))*(1.0d0-Pi_p(z_l,G_PI,t_l,h_l,e_l))
-        else
-            !the unemployment to employement: the productivity shock is equal to the uncond mean
-            Pi_p(z_l,1:G_PI-1,t_l,h_l,e_l)=Pi_p_0(1:G_PI-1,t_l,h_l,e_l)/sum(Pi_p_0(1:G_PI-1,t_l,h_l,e_l))*(1.0d0-Pi_p(z_l,G_PI,t_l,h_l,e_l)) 
-            !the unemployment to employement: the productivity shock is the lowest possible
-            !Pi_p(z_l,1:G_PI-1,t_l,h_l,e_l)=0.0d0
-            !Pi_p(z_l,1,t_l,h_l,e_l)=(1.0d0-Pi_p(z_l,G_PI,t_l,h_l,e_l)) 
-        end if  
-        if (isnan(sum(Pi_p(z_l,:,t_l,h_l,e_l)))) then
-            print*,'pb 3',Pi_p(z_l,:,t_l,h_l,e_l)
-            print*,z_l,t_l,h_l,e_l
-            pause
-        end if
-        if (sum(Pi_p(z_l,:,t_l,h_l,e_l))<0.99d0) then
-            print*,'pb 3',Pi_p(z_l,:,t_l,h_l,e_l)
-            print*,z_l,t_l,h_l,e_l
-            pause
-        end if
-    end do;end do;end do;end do
-        
+        call transition_pr(rho(e_l,1),s2_nu(e_l,1),G_PI,mag_p(1:G_PI,t_l,e_l),mag_p(1:G_PI,t_l+1,e_l),Pi_p(1:G_PI,1:G_PI,t_l,h_l,e_l)) !Pi_p(1,:,t_l,h_l,e_l)
+    end do;end do;end do        
 
     income_grid=0.0d0
     do t_l=1,T_R;do y_l=1,G_types;do e_l=1,G_educ;do h_l=1,G_h;do z_l=1,G_PI;do z_l2=1,G_PI
+        age=first_age_sm+(t_l-1)*2-70
+        z=mag_p(z_l,t_l,e_l)
+        z2=mag_tr(z_l2,e_l)
+        y_d=0.0d0
+        y_d(y_l)=1.0d0
 
-2        if (z_l<G_PI) then
-            age=first_age_sm+(t_l-1)*2-70
-            z=mag_p(z_l,t_l,e_l)
-            z2=mag_tr(z_l2,e_l)
-            y_d=0.0d0
-            y_d(y_l)=1.0d0
-
-            X(:,1)=(/1.0_dp,dble(age),dble(age)**2.0d0,dble(age)**3.0d0,dble(h_l-1),dble(h_l-1)*dble(age)/)
+        X(:,1)=(/1.0_dp,dble(age),dble(age)**2.0d0,dble(age)**3.0d0,dble(h_l-1),dble(h_l-1)*dble(age)/)
             
-            gross_annual_income=exp(sum(X(:,1)*beta(:,e_l))+z+z2)/1000.0d0
-            if (reference_cohort==2)then
-                gross_annual_income=gross_annual_income*wage_premium_data(6+e_l,t_l)
-            elseif (reference_cohort==3)then 
-                gross_annual_income=gross_annual_income*wage_premium_data(6+e_l,t_l+7)
-            elseif (reference_cohort==4)then 
-                gross_annual_income=gross_annual_income*wage_premium_data(6+e_l,t_l+15)
-            end if
-            taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=min(gross_annual_income,ss_bar)*2.0d0
-            income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=(min(gross_annual_income,av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau)) - tau_mcr*gross_annual_income-tau_ss*min(gross_annual_income,ss_bar))*2.0d0
-            income_tax(y_l,e_l,t_l,h_l,z_l,z_l2)=gross_annual_income*2.0d0-min(gross_annual_income,av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau))*2.0d0
-        else
-            income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
-            taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
-            income_tax(y_l,e_l,t_l,h_l,z_l,z_l2)=0.0d0
-        end if
-        if (income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)<0.0d0) then
-            print*,'negative income'   
-            go to 2
-        end if
+        gross_annual_income=(health_p(h_l,t_l,e_l)*exp(wage_lf_profile(1,t_l,e_l,reference_cohort)+z+z2))/1000.0d0 
+
+        taxable_income(y_l,e_l,t_l,h_l,z_l,z_l2)=min(gross_annual_income,ss_bar)*2.0d0
+        income_grid(y_l,e_l,t_l,h_l,z_l,z_l2)=(min(gross_annual_income,av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau)) - tau_mcr*gross_annual_income-tau_ss*min(gross_annual_income,ss_bar))*2.0d0
+        income_tax(y_l,e_l,t_l,h_l,z_l,z_l2)=gross_annual_income*2.0d0-min(gross_annual_income,av_income*lambda*(gross_annual_income/av_income)**(1.0d0-tau))*2.0d0
     end do;end do;end do;end do;end do;end do
     
     call compute_pension()
@@ -324,7 +261,7 @@ subroutine compute_pension()
         implicit none
         integer,parameter::indv_sim_p=500000
         double precision::u
-        integer::h,t_l,ind,i_l,y,e,h2,pi_l,df,ts_l,pi_l2,pi_old
+        integer::h,t_l,ind,i_l,y,e,h2,pi_l,df,ts_l,pi_l2,pi_old,un_l
         character::continue_k
         real(DP),dimension(T_R)::gross_earnings
         integer,dimension(G_PI)::counter
@@ -354,6 +291,7 @@ subroutine compute_pension()
                     if (t_l==1) then
                         call RANDOM_NUMBER(u)
                         ind=1
+                        !Sample initial health status
                         h=-9
                         do while (h==-9)
                             if (u<sum(fraction_h_ey(1:ind,e,y)))then
@@ -373,23 +311,27 @@ subroutine compute_pension()
                                 ind=ind+1
                             end if
                         end do
-
-                        !Sample transitory income shock from uncond distribution
+                    else
+                        !Sample health status
                         call RANDOM_NUMBER(u)
                         ind=1
-                        ts_l=-9
-                        do while (ts_l==-9)
-                            if (ind>G_PI) then
-                                print*,'error simulating initial persistent shock 1'
+                        h2=-9
+                        do while (h2==-9)
+                            if (ind>G_h+1) then
+                                print*,'error simulating initial persistent shock 4'
                                 read*,continue_k
                             end if
-                            if (u<sum(Pi_t(1:ind,e))) then
-                                ts_l=ind
+                            if (u<sum(H_sm(h,1:ind,t_l,y,e))) then !H_sm(h,:,t_l,y,e)
+                                h2=ind
+                                h=h2
                             else
                                 ind=ind+1
                             end if
                         end do
-                    else
+                        !If dead go to next individual
+                        if (h==G_h+1) then
+                            exit
+                        end if
                         !Sample persisent income shock from cond distribution
                         if (t_l<=T_R) then
                             call RANDOM_NUMBER(u)
@@ -408,63 +350,53 @@ subroutine compute_pension()
                                     ind=ind+1
                                 end if
                             end do
-            
-                            !Sample transitory income shock from uncond distribution
-                            call RANDOM_NUMBER(u)
-                            ind=1
-                            ts_l=-9
-                            do while (ts_l==-9)
-                                if (ind>G_PI) then
-                                    print*,'error simulating initial persistent shock 3'
-                                    read*,continue_k
-                                end if
-                                if (u<sum(Pi_t(1:ind,e))) then
-                                    ts_l=ind
-                                else
-                                    ind=ind+1
-                                end if
-                            end do
                         end if
-            
-                        !Sample health status
-                        call RANDOM_NUMBER(u)
-                        ind=1
-                        h2=-9
-                        do while (h2==-9)
-                            if (ind>G_h+1) then
-                                print*,'error simulating initial persistent shock 4'
-                                read*,continue_k
-                            end if
-                            if (u<sum(H_sm(h,1:ind,t_l,y,e))) then !H_sm(h,:,t_l,y,e)
-                                h2=ind
-                                h=h2
-                            else
-                                ind=ind+1
-                            end if
-                        end do
                     end if
+                    
+                    !Sample unemployment shock
+                    un_l=0
+                    call RANDOM_NUMBER(u)
+                    if (u<Pi_un(t_l,h,e,2)) then
+                        un_l=1
+                    end if
+                        
+                    !Sample transitory income shock from uncond distribution
+                    call RANDOM_NUMBER(u)
+                    ind=1
+                    ts_l=-9
+                    do while (ts_l==-9)
+                        if (ind>G_PI) then
+                            print*,'error simulating initial persistent shock 3'
+                            read*,continue_k
+                        end if
+                        if (u<sum(Pi_t(1:ind,e))) then
+                            ts_l=ind
+                        else
+                            ind=ind+1
+                        end if
+                    end do
+            
+
                     if (h==2) then
                         counter_bh(t_l)=counter_bh(t_l)+1
                     end if
-            
-                    gross_earnings(t_l)=taxable_income(y,e,t_l,min(h,G_h),pi_l,ts_l)   
-            
-                    !If dead go to next individual
-                    if (h==G_h+1) then
-                        exit
+                    
+                    if (un_l==0) then
+                        gross_earnings(t_l)=taxable_income(y,e,t_l,min(h,G_h),pi_l,ts_l)   
+                    else
+                        gross_earnings(t_l)=0.0d0
                     end if
+            
+                    
                     
                     counter_income(t_l)=counter_income(t_l)+1
-                    panel_income(counter_income(t_l),t_l)=income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l) !
+                    panel_income(counter_income(t_l),t_l)=gross_earnings(t_l)/2.0d0
 
-                    if (t_l<=T_R) then
-                        if (h==1 .and. pi_old<G_PI .and. pi_old>0) then
-                            counter_un(t_l)=counter_un(t_l)+1
-                            if (pi_l==G_PI) then 
-                                pr_unemployed(t_l,e,y)=pr_unemployed(t_l,e,y)+1.0d0
-                            end if
-                        end if
-                    end if
+                    !if (t_l<=T_R) then
+                    !    if (pi_l==G_PI) then 
+                    !        pr_unemployed(t_l,e,y)=pr_unemployed(t_l,e,y)+1.0d0
+                    !    end if
+                    !end if
             
                 end do;
                 if (h<G_h+1) then
@@ -499,7 +431,7 @@ subroutine compute_pension()
                 av_income_panel(t_l,e,y)=sum(panel_income(1:counter_income(t_l),t_l))/dble(counter_income(t_l)) !av_income_panel(:,1,1)
                 std_income(t_l,e,y)=sqrt(sum((panel_income(1:counter_income(t_l),t_l)-av_income_panel(t_l,e,y))**2.0d0)/dble(counter_income(t_l)-1))
                 if (t_l<=T_R) then
-                    pr_unemployed(t_l,e,y)=pr_unemployed(t_l,e,y)/dble(counter_un(t_l)) 
+                    pr_unemployed(t_l,e,y)=pr_unemployed(t_l,e,y)/dble(counter_income(t_l)) 
                     pr_bh(t_l,e,y)=counter_bh(t_l)/dble(counter_income(t_l))
                 end if             
             end do
@@ -509,8 +441,10 @@ subroutine compute_pension()
         
 
         open(unit=9,file='mean_income_c_'//reference_cohort_s//'.txt')
-        do t_l=1,T
-            write(9,'(I2,<G_educ>F8.2)'),t_l,av_income_panel(t_l,1,1),av_income_panel(t_l,2,1),av_income_panel(t_l,3,1)
+        do t_l=1,T_R
+            write(9,'(I2,<G_educ>F8.3)'),t_l,av_income_panel(t_l,1,1),&
+                                             av_income_panel(t_l,2,1),&
+                                             av_income_panel(t_l,3,1)
         end do
         close(9)       
 

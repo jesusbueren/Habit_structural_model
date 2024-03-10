@@ -97,34 +97,22 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                 if (t_l==1) then
                     !Sample intial health given health behavior and education
                     ind=1
-                    h=1!-9
-                    !do while (h==-9)
-                    !    if (u(9,t_l)<sum(fraction_h_ey(1:ind,e,y)))then
-                    !        h=ind
-                    !    else
-                    !        ind=ind+1
-                    !    end if
-                    !end do
-                    !Sample  medical shock from uncond distribution
-                    ind=1
-                    xi=-9
-                    do while (xi==-9)
-                        if (ind>G_nzz) then
-                            print*,'error simulating initial persistent shock '
-                            read*,continue_k
-                        end if
-                        if (u(1,t_l)<sum(pr0_p(1:ind,1))) then
-                            xi=ind
+                    h=-9
+                    do while (h==-9)
+                        if (u(9,t_l)<sum(fraction_h_ey(1:ind,e,y)))then
+                            h=ind
                         else
                             ind=ind+1
                         end if
                     end do
-                    !Sample persisent income shock from uncond distribution
+                    !Sample persistent income shock from uncond distribution
                     ind=1
                     pi_l=-9
                     do while (pi_l==-9)
                         if (ind>G_PI) then
                             print*,'error simulating initial persistent shock ',t_l,h,e
+                            print*,Pi_p_0(:,t_l,h,e)
+                            print*,sum(Pi_p_0(:,t_l,h,e)),u(2,t_l)
                             read*,continue_k
                         end if
                         if (u(2,t_l)<sum(Pi_p_0(1:ind,t_l,h,e))) then 
@@ -133,78 +121,17 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                             ind=ind+1
                         end if
                     end do
-                    !Sample transitory income shock from uncond distribution
-                    ind=1
-                    ts_l=-9
-                    do while (ts_l==-9)
-                        if (ind>G_PI) then
-                            print*,'error simulating initial persistent shock '
-                            read*,continue_k
-                        end if
-                        if (u(3,t_l)<sum(Pi_t(1:ind,1))) then
-                            ts_l=ind
-                        else
-                            ind=ind+1
-                        end if
-                    end do
-                    cash_on_hand=(1+r)*savings+income_grid(y,e,t_l,h,pi_l,ts_l)-m_grid(e,t_l,h,xi)
                 else
-                   !Sample  medical shock from uncond distribution
-                    ind=1
-                    xi=-9
-                    do while (xi==-9)
-                        if (ind>G_nzz) then
-                            print*,'error simulating initial persistent shock '
-                            read*,continue_k
-                        end if
-                        if (u(4,t_l)<sum(pr0_p(1:ind,1))) then
-                            xi=ind
-                        else
-                            ind=ind+1
-                        end if
-                    end do
-            
-                    !Sample persisent income shock from cond distribution
-                    if (t_l<=T_R) then
-                        ind=1
-                        pi_l2=-9
-                        do while (pi_l2==-9)
-                            if (ind>G_PI) then
-                                print*,'error simulating initial persistent shock '
-                                read*,continue_k
-                            end if
-                            if (u(5,t_l)<sum(Pi_p(pi_l,1:ind,t_l,h,e))) then
-                                pi_l2=ind
-                                pi_l=pi_l2
-                            else
-                                ind=ind+1
-                            end if
-                        end do
-            
-                        !Sample transitory income shock from uncond distribution
-
-                        ind=1
-                        ts_l=-9
-                        do while (ts_l==-9)
-                            if (ind>G_PI) then
-                                print*,'error simulating initial persistent shock '
-                                read*,continue_k
-                            end if
-                            if (u(6,t_l)<sum(Pi_t(1:ind,1))) then
-                                ts_l=ind
-                            else
-                                ind=ind+1
-                            end if
-                        end do
-                    end if
-            
+                    
                     !Sample health status
                     ind=1
                     lag_h=h
                     h2=-9
                     do while (h2==-9)
                         if (ind>G_h+1) then
-                            print*,'error simulating initial persistent shock '
+                            print*,'error simulating h shock '
+                            print*,H_sm(h,1:ind,t_l,y,e)
+                            print*,sum(H_sm(h,1:ind,t_l,y,e)),u(7,t_l)
                             read*,continue_k
                         end if
                         if (u(7,t_l)<sum(H_sm(h,1:ind,t_l,y,e))) then !H_sm(h,:,t_l,y,e)
@@ -214,17 +141,75 @@ subroutine simulate_model(a_policy,VSL,asset_distribution,av_VSL,av_V_ini,p50_de
                             ind=ind+1
                         end if
                     end do
+                end if 
+                
+                !Sample persisent income shock from cond distribution
+                if (t_l<=T_R .and. t_l>1 .and. h<G_h+1) then
+                    ind=1
+                    pi_l2=-9
+                    do while (pi_l2==-9)
+                        if (ind>G_PI) then
+                            print*,'error simulating  persistent shock '
+                            read*,continue_k
+                        end if
+                        if (u(5,t_l)<sum(Pi_p(pi_l,1:ind,t_l,h,e))) then
+                            pi_l2=ind
+                            pi_l=pi_l2
+                        else
+                            ind=ind+1
+                        end if
+                    end do
+                end if
+                    
+                !Sample  medical shock from uncond distribution
+                ind=1
+                xi=-9
+                do while (xi==-9)
+                    if (ind>G_nzz) then
+                        print*,'error simulating m shock '
+                        print*,pr0_p(1:ind,1)
+                        print*,sum(pr0_p(1:ind,1)),u(4,t_l)
+                        read*,continue_k
+                    end if
+                    if (u(4,t_l)<sum(pr0_p(1:ind,1))) then
+                        xi=ind
+                    else
+                        ind=ind+1
+                    end if
+                end do
             
-                    if (t_l>=T_R) then
-                        cash_on_hand=(1+r)*savings+PI_grid(pi_l,e,y)-m_grid(e,t_l,min(h,G_h),xi)
+                !Sample transitory income shock from uncond distribution
+                ind=1
+                ts_l=-9
+                do while (ts_l==-9)
+                    if (ind>G_PI) then
+                        print*,'error tr shock '
+                        print*,Pi_t(1:ind,1)
+                        print*,sum(Pi_t(1:ind,1)),u(6,t_l)
+                        read*,continue_k
+                    end if
+                    if (u(6,t_l)<sum(Pi_t(1:ind,1))) then
+                        ts_l=ind
+                    else
+                        ind=ind+1
+                    end if
+                end do
+                
+                
+                if (t_l>=T_R) then
+                    cash_on_hand=(1+r)*savings+PI_grid(pi_l,e,y)-m_grid(e,t_l,min(h,G_h),xi)
+                else
+                    !Unemployment shock
+                    if (u(10,t_l)<Pi_un(t_l,h,e,2)) then
+                        cash_on_hand=(1+r)*savings-m_grid(e,t_l,min(h,G_h),xi)
                     else
                         cash_on_hand=(1+r)*savings+income_grid(y,e,t_l,min(h,G_h),pi_l,ts_l)-m_grid(e,t_l,min(h,G_h),xi)
                     end if
                 end if
+
         
                 !If dead go to next individual
                 if (h==G_h+1) then
-
                     V_i(df,y,counter(1,y,df))=V_i(df,y,counter(1,y,df))+betas(df)**(T-t_l)*beq_fct(max(cash_on_hand,0.0d0)*(1.0d0-lambda_c(e,y)))
 
                     if (isnan(V_i(df,y,counter(1,y,df)))) then

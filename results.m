@@ -67,16 +67,10 @@ for e_l=1:type_e
             ylabel('College')
         end 
     end
-%     if e_l==1
-%         ylim([0 700])
-%         yticks(0:200:700)
-%     elseif e_l==2
-%         ylim([0 1000])
-%         yticks(0:300:1000)
-%     else
+
         ylim([0 1800])
         yticks(0:500:1800)
-%     end
+
 
     xlim([ini_age-1 fin_age+1])
     set(gca,'FontName','Times New Roman','FontSize',FS);
@@ -84,17 +78,11 @@ for e_l=1:type_e
 end
 end
 
-% I=legend([A B C D],'p50: Model','p50: Data','p25-p75: Model','p25-p75: Data','Location','northwest','orientation','horizontal')
-% legend('boxoff')
-% I.FontSize=FS
-% newPosition = [0.45 -0.02 0.1 0.1];
-% newUnits = 'normalized';
-% set(I,'Position', newPosition,'Units', newUnits);
 grid off
 grid off
 set(gca,'FontName','Times New Roman','FontSize',FS);
 set(gcf,'color','w')
-print('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\model_fit','-depsc')
+print('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\model_fit','-depsc')
 
 for y_l=1:type_y
 for e_l=1:type_e
@@ -126,13 +114,13 @@ for e_l=1:type_e
     str_title2=strcat(edu_title, type_title)
     title(str_title)
     set(hax_new, 'Position', get(0, 'DefaultAxesPosition'));
-    print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\model_fit',str_title2),'-depsc')
+    print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\model_fit',str_title2),'-depsc')
     set(gca,'FontName','Times New Roman','FontSize',FS);
 end
 end
 
-
-
+%%
+% 
 % figure(3)
 % set(3,'position',[150    150    500    400])
 % for e_l=1:3
@@ -162,8 +150,8 @@ end
 %         set(gcf,'color','w')
 %     end
 % end
-
-% print('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\model_fit2','-depsc')
+% 
+% print('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\model_fit2','-depsc')
 
 
 
@@ -187,16 +175,24 @@ G_cohorts=2;
 data_mat=data.data;
 data_mat=reshape(data_mat(:,2:5),type_y,3,G_cohorts,G_df,4);
 
-e_l=1
-c_l=1
 df_l=1
 j=2
-data_mat(1,e_l,c_l,df_l,j)-data_mat(2,e_l,c_l,df_l,j)
+
+data_mat(1,:,1,df_l,j)-data_mat(2,:,1,df_l,j)
+data_mat(1,:,2,df_l,j)-data_mat(2,:,2,df_l,j)
+
+data_mat(1,:,2,df_l,j)-data_mat(2,:,2,df_l,j)-(data_mat(1,:,1,df_l,j)-data_mat(2,:,1,df_l,j))
+
+
 e_l=1
-c_l=2
 df_l=1
 j=2
-data_mat(1,e_l,c_l,df_l,j)-data_mat(2,e_l,c_l,df_l,j)
+data_mat(1,e_l,1,df_l,j)-data_mat(1,e_l,2,df_l,j)-(data_mat(2,e_l,1,df_l,j)-data_mat(2,e_l,2,df_l,j))
+
+e_l=3
+df_l=1
+j=2
+data_mat(1,e_l,1,df_l,j)-data_mat(1,e_l,2,df_l,j)-(data_mat(2,e_l,1,df_l,j)-data_mat(2,e_l,2,df_l,j))
 
 % (data_mat(1,1,1,1,2)-data_mat(2,1,1,1,2))-((data_mat(1,1,2,1,2)-data_mat(2,1,2,1,2)))
 % 
@@ -257,7 +253,7 @@ end
 
 set(gca,'FontName','Times New Roman','FontSize',FS);
 if j==1
-    ylim([-5,100])
+%     ylim([-5,100])
 elseif j==2
    ylim([min(data_mat(:,:,c_l,df_l,j),[],'all')-10,max(data_mat(:,:,c_l,df_l,j),[],'all')+10])
 
@@ -267,7 +263,6 @@ end
 print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\stage1_',num2str(j)),'-depsc')
 end
 end
-
 
 df_l=1
 for c_l=1:G_cohorts
@@ -347,51 +342,153 @@ for c_l=1:G_cohorts
     elseif c_l==4
         title('Born in 1970');
     end
-    set(gcf,'color','w');
+    set(gcf,'color','w')
 end
 
 print('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\stage1_pr_e','-depsc');
 
+%% distribution of epsilon_pro cross section
+clear all
+close all
+clc
+cd('C:\Users\jbueren\Google Drive\endo_health\structural_model')
+
+colors = { [0.4660    0.6740    0.1880]    [0.8500    0.3250    0.0980]  [0.9290    0.6940    0.1250]   [0   0.4470    0.7410] [0.4940    0.1840    0.5560]};
+
+
+FS=10
+
+benchmark=importdata('eps_c1.txt');
+eps=benchmark(:,6);
+benchmark2=importdata('eps_c2.txt');
+eps2=benchmark2(:,6);
+
+e_l=1
+c_l=1
+figure(1)
+set(e_l,'position',[150    150    500    250])
+xi=linspace(-10,20,500);
+f=ksdensity(eps(benchmark(:,c_l)==e_l),xi);
+l1=plot(xi,f./sum(f),'Linewidth',2)
+hold on
+f=ksdensity(eps(benchmark(:,c_l)==3),xi);
+l2=xline(max(eps(benchmark(:,1)==e_l & benchmark(:,3)==1)),'-','Linewidth',2)
+l3=xline(max(eps(benchmark(:,2)==e_l & benchmark(:,5)==1)),'--','Linewidth',1.5)
+l4=xline(max(eps(benchmark2(:,2)==e_l & benchmark2(:,5)==1)),':','Linewidth',2)
+l5=plot(xi,f./sum(f),'--','Linewidth',2)
+xlim([-10 20])
+% ylim([0 0.05])
+yl = ylim();
+text(0.1,(yl(2)-yl(1))*0.95,'Protective','FontName','Times New Roman','Fontsize',FS)
+text(4.5,(yl(2)-yl(1))*0.95,'Detrimental','FontName','Times New Roman','Fontsize',FS)
+legend('pdf \tau_{PRO} HSD','benchmark', 'income effect','health effect','pdf \tau_{PRO} CG')
+hold on
+set(gca,'FontName','Times New Roman','FontSize',FS);
+set(gcf,'color','w')
+edu_title="Dropout"
+print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\cross',edu_title),'-depsc')
+
+%Benchmark
+set(l3,'Visible','off');
+set(l4,'Visible','off');
+set(l5,'Visible','off');
+print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\cross_1'),'-depsc')
+%income effect
+set(l2,'Visible','on');
+set(l3,'Visible','on');
+set(l4,'Visible','off');
+set(l5,'Visible','off');
+print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\cross_2'),'-depsc')
+%health effect
+set(l2,'Visible','on');
+set(l3,'Visible','off');
+set(l4,'Visible','on');
+set(l5,'Visible','off');
+print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\cross_3'),'-depsc')
+%selection effect
+set(l2,'Visible','on');
+set(l3,'Visible','off');
+set(l4,'Visible','off');
+set(l5,'Visible','on');
+print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\cross_4'),'-depsc')
 
 
 
 
 
 
-% 
-% df_l=1
-% for c_l=1:G_cohorts
-% j=3
-% X=categorical({'Dropouts','Highschool','College','Protective','Detrimental'})
-% X = reordercats(X,{'Dropouts','Highschool','College','Protective','Detrimental'});
-% figure(4)
-% set(4,'position',[150    150    500    250])
-% subplot(1,G_cohorts,c_l)
-% for e_l=1:3
-%     A(e_l,:,:)=squeeze(data_mat(:,e_l,c_l,df_l,j:j+1))
-%     B2(e_l,:)=sum(squeeze(A(e_l,:,:)),1)
-% end
-% for e_l=1:2
-%     B2(e_l+3,:)=sum(squeeze(data_mat(e_l,:,c_l,df_l,j:j+1)))
-% end
-% b=bar(X,B2,'FaceColor','flat') 
-% 
-% set(gca,'FontName','Times New Roman','FontSize',FS-1);
-% xline(3.5,'--');
-% if c_l==1
-% legend(b,'Data','Model','Location','northwest')
-% end
-% ylim([0,1.0])
-% if c_l==1
-%     title('Born in 1930')
-% elseif c_l==2
-%     title('Born in 1950')
-% elseif c_l==3
-%     title('Born in 1970')
-% end
-% set(gcf,'color','w')
-% end
-% print('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\stage1_pr_e','-depsc')
+
+
+%% distribution of epsilon_pro across educations
+clear all
+close all
+clc
+cd('C:\Users\jbueren\Google Drive\endo_health\structural_model')
+
+colors = { [0.4660    0.6740    0.1880]    [0.8500    0.3250    0.0980]  [0.9290    0.6940    0.1250]   [0   0.4470    0.7410] [0.4940    0.1840    0.5560]};
+
+
+FS=10
+
+benchmark=importdata('eps_c3.txt');
+eps=benchmark(:,6)-8.0;
+
+
+
+for e_l=1:3
+figure(e_l)
+set(e_l,'position',[150    150    500    250])
+% subplot(1,3,e_l) 
+xi=linspace(0,20,500);
+
+c_l=1
+f=ksdensity(eps(benchmark(:,c_l)==e_l),xi);
+l1=plot(xi,f./sum(f),'Linewidth',2)
+hold on
+% legend('1930','1970')
+l2=xline(max(eps(benchmark(:,1)==e_l & benchmark(:,3)==1)),'-','Linewidth',2)
+l3=xline(max(eps(benchmark(:,2)==e_l & benchmark(:,5)==1)),'--','Linewidth',2)
+c_l=2
+f=ksdensity(eps(benchmark(:,c_l)==e_l),xi);
+l4=plot(xi,f./sum(f),'--','Linewidth',2)
+xlim([0 10])
+ylim([0 0.03])
+yl = ylim();
+
+if e_l<3
+    text(0.1,(yl(2)-yl(1))*0.95,'Protective','FontName','Times New Roman','Fontsize',FS)
+    text(4.5,(yl(2)-yl(1))*0.95,'Detrimental','FontName','Times New Roman','Fontsize',FS)
+else
+    text(2,(yl(2)-yl(1))*0.5,'Protective','FontName','Times New Roman','Fontsize',FS)
+    text(7,(yl(2)-yl(1))*0.5,'Detrimental','FontName','Times New Roman','Fontsize',FS)
+end 
+legend('pdf \tau_{pro}: 1930','income: 1930', 'income: 1970','pdf \tau_{pro}: 1970')
+
+set(gca,'FontName','Times New Roman','FontSize',FS);
+set(gcf,'color','w')
+if e_l==1
+    edu_title="Dropout"
+elseif e_l==2
+    edu_title="Highschool"
+elseif e_l==3
+    edu_title="College"
+end
+%Benchmark
+set(l3,'Visible','off');
+set(l4,'Visible','off');
+print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\time_',edu_title,'_1'),'-depsc')
+%income effect
+set(l2,'Visible','on');
+set(l3,'Visible','on');
+set(l4,'Visible','off');
+print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\time_',edu_title,'_2'),'-depsc')
+%selection effect
+set(l2,'Visible','on');
+set(l3,'Visible','on');
+set(l4,'Visible','on');
+print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\time_',edu_title,'_3'),'-depsc')
+end
+
 
 %% Decomposition first stage
 clear all
@@ -504,30 +601,6 @@ print(strcat('C:\Users\jbueren\Dropbox\habits\Slides\v2\figures\counterfactual_u
 end
 
 
-%% distribution of epsilon_pro across educations
-clear all
-close all
-clc
-cd('C:\Users\jbueren\Google Drive\endo_health\structural_model')
-
-colors = { [0.4660    0.6740    0.1880]    [0.8500    0.3250    0.0980]  [0.9290    0.6940    0.1250]   [0   0.4470    0.7410] [0.4940    0.1840    0.5560]};
-
-
-
-FS=10
-G_educ=3
-benchmark=importdata('eps_HSD.txt');
-[f,xi]=ksdensity(benchmark(:,3));
-figure(1)
-set(1,'position',[150    150    400    250])
-plot(xi,f,'Linewidth',2)
-xline(min(benchmark(benchmark(:,1)==1,3)),'-','Linewidth',2)
-xline(min(benchmark(benchmark(:,2)==1,3)),'--','Linewidth',2)
-legend('pdf ','1930','1970')
-xlim([-1.5 1.5])
-set(gca,'FontName','Times New Roman','FontSize',FS-2);
-set(gcf,'color','w')
-print('C:\Users\jbueren\Dropbox\habits\Slides\2023_EUI\figures\eps_pro_hsd','-depsc');
 
 
 %%
@@ -602,22 +675,26 @@ colors =  {[0.0000, 0.4470, 0.7410];...   % Dark Blue
 
 FS=10
 figure(1)
-set(1,'position',[150    150    450    250])
-subplot(1,2,1)
+set(1,'position',[150    150    500    300])
+% subplot(1,2,1)
 for c_l=[ 2  4]
     data=importdata(strcat('mean_income_c_',int2str(c_l),'.txt'));
-    plot(25:2:65,data(1:21,2)./2,'linewidth',1.5,'linestyle',pattern{c_l},'Color',colors{1})
+    plot(27:2:65,data(1:20,2),'linewidth',1.5,'linestyle',pattern{c_l},'Color',colors{1})
     hold on
-    plot(25:2:65,data(1:21,3)./2,'linewidth',1.5,'linestyle',pattern{c_l},'Color',colors{2})
-    plot(25:2:65,data(1:21,4)./2,'linewidth',1.5,'linestyle',pattern{c_l},'Color',colors{3})
+    plot(27:2:65,data(1:20,3),'linewidth',1.5,'linestyle',pattern{c_l},'Color',colors{2})
+    plot(27:2:65,data(1:20,4),'linewidth',1.5,'linestyle',pattern{c_l},'Color',colors{3})
 %     legend('Dropout 1930','College 1930','Dropout 1970','College 1970')
-    ylim([0 90])
+%     ylim([10 110])
 end
-title('Mean Wage')
 ylabel('$ (000s)')
 xlabel('Age')
-set(gca,'FontName','Times New Roman','FontSize',FS-2);
-subplot(1,2,2)
+legend('HSD: 1930','HSG: 1930','CG: 1930','HSD: 1970','HSG: 1970','CG: 1970','NumColumns',2)
+set(gca,'FontName','Times New Roman','FontSize',FS);
+set(gcf,'color','w')
+print('C:\Users\jbueren\Dropbox\habits\Draft\figures\mean_wage_tuition','-depsc')
+%%
+figure(2)
+% subplot(1,2,2)
 plot(year_grid-18,pv_colcost./1000,'k')
 xlabel('Birth year cohort')
 xlim([start_year-18 end_year-18]);

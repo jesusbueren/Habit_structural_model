@@ -99,7 +99,7 @@ subroutine solve_model(a_policy,VSL)
             a_l1=1
             do a_l2=1,G_nkk
                 dV_x2(a_l2)=betas(df_l)*(1.0d0+r)*ExpMarginalUtility(a_grid(a_l2),a_policy(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l,df_l)
-                x_policy(a_l2)=(dV_x2(a_l2)*n_bar(t_l))**(-1.0d0/RRA)*n_bar(t_l)+a_grid(a_l2)
+                x_policy(a_l2)=(dV_x2(a_l2)*n_bar(t_l)/(1.0d0-delta_h*dble(h_l-1)))**(-1.0d0/RRA)*n_bar(t_l)+a_grid(a_l2)
                 if (isnan(x_policy(a_l2))) then
                     print*,ExpMarginalUtility(a_grid(a_l2),a_policy(:,t_l+1,:,:,e_l,y_l,df_l),t_l,h_l,pi_l,e_l,y_l,df_l)
                     print*,'isnan solve model'
@@ -287,7 +287,7 @@ FUNCTION u_fct(c,n,h,y)
                 u_fct=(1.0d0-delta_h*dble(h-1))*log(c/n)+b_bar(h)
             end if
             
-END FUNCTION u_fct
+END FUNCTION u_fct  
 FUNCTION ExpConVal (a,FV,t_l,h_l,pi_l,e_l,y_l)
             use nrtype; use preference_p;use var_first_step
             implicit none
@@ -296,7 +296,7 @@ FUNCTION ExpConVal (a,FV,t_l,h_l,pi_l,e_l,y_l)
              REAL(DP),dimension(G_nkk,G_h+1,G_PI), INTENT(IN) ::FV
              integer, INTENT(IN) :: t_l,h_l,pi_l,e_l,y_l
              REAL(DP)::cash_on_hand,alpha,sum
-             integer:: xi_l2, h_l2,loc_coh,pi_l2,ts_l2
+             integer:: xi_l2, h_l2,loc_coh,pi_l2,ts_l2,u_l
              step=(a_max-a_min)/dble(G_nkk-1)
              ExpConVal=0.0d0
              sum=0.0d0
@@ -318,23 +318,27 @@ FUNCTION ExpConVal (a,FV,t_l,h_l,pi_l,e_l,y_l)
                      end if
                  end do;end do
             else
-                do xi_l2=1,G_nzz; do h_l2=1,G_h+1; do pi_l2=1,G_PI; do ts_l2=1,G_PI
-                    cash_on_hand=(1.0d0+r)*a+income_grid(y_l,e_l,t_l,min(h_l2,G_h),pi_l2,ts_l2)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2) 
+                do xi_l2=1,G_nzz; do h_l2=1,G_h+1; do pi_l2=1,G_PI; do ts_l2=1,G_PI; do u_l=1,2
+                    if (u_l==1) then
+                        cash_on_hand=(1.0d0+r)*a+income_grid(y_l,e_l,t_l,min(h_l2,G_h),pi_l2,ts_l2)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2) 
+                    else
+                        cash_on_hand=(1.0d0+r)*a-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2) 
+                    end if
                     if (cash_on_hand<c_floor) then
-                         ExpConVal=ExpConVal+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*FV(1,h_l2,pi_l2)
+                         ExpConVal=ExpConVal+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*FV(1,h_l2,pi_l2)
                      else
                          !locate cash on hand in capital grid
                          loc_coh=max(min(int(cash_on_hand/step)+1,G_nkk),1)
                          if (loc_coh<G_nkk) then !Pi_p(pi_l,:,t_l,h_l,e_l)
                             alpha=(cash_on_hand-a_grid(loc_coh))/step
-                            ExpConVal=ExpConVal+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*((FV(loc_coh+1,h_l2,pi_l2)-FV(loc_coh,h_l2,pi_l2))*alpha+FV(loc_coh,h_l2,pi_l2))
+                            ExpConVal=ExpConVal+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*((FV(loc_coh+1,h_l2,pi_l2)-FV(loc_coh,h_l2,pi_l2))*alpha+FV(loc_coh,h_l2,pi_l2))
                             sum=sum+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)
                         else
                             alpha=(cash_on_hand-a_grid(G_nkk-1))/step
-                            ExpConVal=ExpConVal+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*((FV(G_nkk,h_l2,pi_l2)-FV(G_nkk-1,h_l2,pi_l2))*alpha+FV(G_nkk-1,h_l2,pi_l2))
+                            ExpConVal=ExpConVal+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*((FV(G_nkk,h_l2,pi_l2)-FV(G_nkk-1,h_l2,pi_l2))*alpha+FV(G_nkk-1,h_l2,pi_l2))
                         end if 
                     end if
-                 end do;end do;end do;end do
+                 end do;end do;end do;end do;end do
             end if        
 END FUNCTION ExpConVal
     
@@ -355,7 +359,7 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l,df_l)
              REAL(DP),dimension(G_nkk,G_h,G_PI), INTENT(IN) ::FSavings
              integer, INTENT(IN) :: t_l,h_l,pi_l,e_l,y_l,df_l
              REAL(DP)::cash_on_hand,alpha,const,Pr_zero_mu,non_zero_mu
-             integer:: xi_l2, h_l2,loc_coh,pi_l2,ts_l2
+             integer:: xi_l2, h_l2,loc_coh,pi_l2,ts_l2,u_l
              interface
                 FUNCTION marginal_beq_fct (a)
                     use nrtype; use preference_p
@@ -429,14 +433,18 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l,df_l)
                         end if
                     end do;end do
             else
-                   do xi_l2=1,G_nzz; do h_l2=1,G_h+1; do pi_l2=1,G_PI; do ts_l2=1,G_PI
-                        cash_on_hand=max((1.0d0+r)*a+income_grid(y_l,e_l,t_l,min(h_l2,G_h),pi_l2,ts_l2)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),c_floor)
+                   do xi_l2=1,G_nzz; do h_l2=1,G_h+1; do pi_l2=1,G_PI; do ts_l2=1,G_PI; do u_l=1,2
+                       if (u_l==1) then
+                            cash_on_hand=max((1.0d0+r)*a+income_grid(y_l,e_l,t_l,min(h_l2,G_h),pi_l2,ts_l2)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),c_floor)
+                       else
+                           cash_on_hand=max((1.0d0+r)*a-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),c_floor)
+                       end if
                         if (h_l2<G_h+1) then
                             !locate cash on hand in capital grid                         
                             loc_coh=max(min(int(cash_on_hand/step)+1,G_nkk),1)
                             if (cash_on_hand==c_floor) then
-                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*0.0d0 
-                                Pr_zero_mu=Pr_zero_mu+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)
+                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_un(t_l,h_l,e_l,u_l)*0.0d0 
+                                Pr_zero_mu=Pr_zero_mu+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)
                                 if (ExpMarginalUtility<0.0d0) then
                                     print*,marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2),cash_on_hand,cash_on_hand-a2
                                     pause
@@ -448,7 +456,7 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l,df_l)
                                 !else
                                     alpha=(cash_on_hand-a_grid(loc_coh))/step 
                                     a2=(FSavings(loc_coh+1,h_l2,pi_l2)-FSavings(loc_coh,h_l2,pi_l2))*alpha+FSavings(loc_coh,h_l2,pi_l2)
-                                    ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
+                                    ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
                                 !end if
                                 if (ExpMarginalUtility<0.0d0) then
                                     print*,marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2),cash_on_hand,cash_on_hand-a2
@@ -458,7 +466,7 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l,df_l)
                             else
                                 alpha=(FSavings(G_nkk,h_l2,pi_l2)-FSavings(G_nkk-1,h_l2,pi_l2))/(a_grid(G_nkk)-a_grid(G_nkk-1))
                                 a2=(FSavings(G_nkk,h_l2,pi_l2)-FSavings(G_nkk-1,h_l2,pi_l2))*alpha+FSavings(G_nkk-1,h_l2,pi_l2)
-                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
+                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2)
                                 if (ExpMarginalUtility<0.0d0) then
                                     print*,marginal_u_fct(cash_on_hand-a2,n_bar(t_l+1),h_l2),cash_on_hand,cash_on_hand-a2
                                     pause
@@ -468,10 +476,10 @@ FUNCTION ExpMarginalUtility (a,FSavings,t_l,h_l,pi_l,e_l,y_l,df_l)
                         else
                             cash_on_hand=max((1.0d0+r)*a+income_grid(y_l,e_l,t_l,min(h_l2,G_h),pi_l2,ts_l2)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),0.0d0)
                             if (cash_on_hand>0.0d0) then
-                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*betas(df_l)**(T-t_l-1)*marginal_beq_fct(cash_on_hand)
+                                ExpMarginalUtility=ExpMarginalUtility+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*betas(df_l)**(T-t_l-1)*marginal_beq_fct(cash_on_hand)
                             end if
                         end if
-                   end do;end do;end do; end do
+                   end do;end do;end do; end do;end do
             end if   
             
 END FUNCTION ExpMarginalUtility    
@@ -494,7 +502,7 @@ FUNCTION value_of_stat_life (a_today,a_prime,FV,t_l,h_l,pi_l,e_l,y_l,df_l)
             REAL(DP),dimension(G_nkk,G_h+1,G_PI), INTENT(IN) ::FV
             integer, INTENT(IN) :: t_l,h_l,pi_l,e_l,y_l,df_l
             REAL(DP)::cash_on_hand,alpha,sum
-            integer:: xi_l2, h_l2,loc_coh,pi_l2,ts_l2
+            integer:: xi_l2, h_l2,loc_coh,pi_l2,ts_l2,u_l
             step=(a_max-a_min)/dble(G_nkk-1)
             value_of_stat_life=0.0d0
             ExpConVal_alive=0.0d0
@@ -522,27 +530,31 @@ FUNCTION value_of_stat_life (a_today,a_prime,FV,t_l,h_l,pi_l,e_l,y_l,df_l)
                     end if  
                 end do;end do
         else
-            do xi_l2=1,G_nzz; do h_l2=1,G_h+1; do pi_l2=1,G_PI; do ts_l2=1,G_PI
-                cash_on_hand=max((1.0d0+r)*a_prime+income_grid(y_l,e_l,t_l,min(h_l2,G_h),pi_l2,ts_l2)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),c_floor) 
+            do xi_l2=1,G_nzz; do h_l2=1,G_h+1; do pi_l2=1,G_PI; do ts_l2=1,G_PI; do u_l=1,2
+                if (u_l==1) then
+                    cash_on_hand=max((1.0d0+r)*a_prime+income_grid(y_l,e_l,t_l,min(h_l2,G_h),pi_l2,ts_l2)-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),c_floor) 
+                else
+                    cash_on_hand=max((1.0d0+r)*a_prime-m_grid(e_l,t_l,min(h_l2,G_h),xi_l2),c_floor) 
+                end if
                     !locate cash on hand in capital grid
                     loc_coh=max(min(int(cash_on_hand/step)+1,G_nkk),1)
                     if (loc_coh<G_nkk) then 
                         alpha=(cash_on_hand-a_grid(loc_coh))/step
                         if (h_l2<G_h+1) then
-                            ExpConVal_alive=ExpConVal_alive+H_sm(h_l,h_l2,t_l,y_l,e_l)/(1.0d0-H_sm(h_l,G_h+1,t_l,y_l,e_l))*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*((FV(loc_coh+1,h_l2,pi_l2)-FV(loc_coh,h_l2,pi_l2))*alpha+FV(loc_coh,h_l2,pi_l2))
+                            ExpConVal_alive=ExpConVal_alive+H_sm(h_l,h_l2,t_l,y_l,e_l)/(1.0d0-H_sm(h_l,G_h+1,t_l,y_l,e_l))*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*((FV(loc_coh+1,h_l2,pi_l2)-FV(loc_coh,h_l2,pi_l2))*alpha+FV(loc_coh,h_l2,pi_l2))
                         else
-                            ExpConVal_dead=ExpConVal_dead+pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*((FV(loc_coh+1,h_l2,pi_l2)-FV(loc_coh,h_l2,pi_l2))*alpha+FV(loc_coh,h_l2,pi_l2))
+                            ExpConVal_dead=ExpConVal_dead+pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*((FV(loc_coh+1,h_l2,pi_l2)-FV(loc_coh,h_l2,pi_l2))*alpha+FV(loc_coh,h_l2,pi_l2))
                         end if
                         sum=sum+H_sm(h_l,h_l2,t_l,y_l,e_l)*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)
                     else
                         alpha=(cash_on_hand-a_grid(G_nkk-1))/step
                         if (h_l2<G_h+1) then
-                            ExpConVal_alive=ExpConVal_alive+H_sm(h_l,h_l2,t_l,y_l,e_l)/(1.0d0-H_sm(h_l,G_h+1,t_l,y_l,e_l))*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*FV(G_nkk,h_l2,pi_l2)
+                            ExpConVal_alive=ExpConVal_alive+H_sm(h_l,h_l2,t_l,y_l,e_l)/(1.0d0-H_sm(h_l,G_h+1,t_l,y_l,e_l))*pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*FV(G_nkk,h_l2,pi_l2)
                         else
-                            ExpConVal_dead=ExpConVal_dead+pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*((FV(G_nkk,h_l2,pi_l2)-FV(G_nkk-1,h_l2,pi_l2))*alpha+FV(G_nkk-1,h_l2,pi_l2))
+                            ExpConVal_dead=ExpConVal_dead+pr0_p(xi_l2,1)*Pi_p(pi_l,pi_l2,t_l,h_l,e_l)*Pi_t(ts_l2,e_l)*Pi_un(t_l,h_l,e_l,u_l)*((FV(G_nkk,h_l2,pi_l2)-FV(G_nkk-1,h_l2,pi_l2))*alpha+FV(G_nkk-1,h_l2,pi_l2))
                         end if
                     end if  
-            end do;end do;end do;end do
+            end do;end do;end do;end do;end do
         end if
             
         value_of_stat_life=betas(df_l)*(ExpConVal_alive-ExpConVal_dead)/(1.0d0/n_bar(t_l)*(((a_today-a_prime)/n_bar(t_l))**(-RRA))) 

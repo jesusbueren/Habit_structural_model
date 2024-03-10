@@ -47,6 +47,13 @@ subroutine calibrate_b_bar()
 	        REAL(DP), INTENT(IN) :: ftol
 	        REAL(DP), INTENT(OUT) :: fret
         end subroutine
+        function inverse_logistic_mapping(x, beta_min, beta_max) result(inverse_mapped_value)
+    use nrtype
+    implicit none
+        real(DP), intent(in) ::beta_min, beta_max
+        real(DP), intent(in) :: x
+        real(DP) :: inverse_mapped_value
+    end function inverse_logistic_mapping
     end interface
     
     open(unit=9,file='parameter.txt')
@@ -70,49 +77,45 @@ subroutine calibrate_b_bar()
         pr_betas=1.0d0
     end if
     
-    b_bar_min=0.0d0
-    b_bar_max=10.0d0
+    b_bar_min=-2.0d0
+    b_bar_max=2.0d0
     it=0
-    
-    VSL_data=3000.0d0
-    b_bar=1.0d0 !3,5,8
-    !do while (abs(av_VSL(2)-VSL_data)>50.0d0 .and. it<10) 
-    !    b_bar=(b_bar_max+b_bar_min)/2.0d0
-    !    !Solve model
-    !    call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)
-    !    if (av_VSL(2)>VSL_data) then
-    !        b_bar_max=b_bar(1)
-    !    else
-    !        b_bar_min=b_bar(1)
-    !    end if
-    !    it=it+1
-    !    print*,it,b_bar(1),av_VSL(1),av_VSL(2)   
-    !end do
+    b_bar=-9.0d0
+    VSL_data=1000.0d0
+    do while (abs(av_VSL(2)-VSL_data)>50.0d0 .and. it<10) 
+        b_bar=(b_bar_max+b_bar_min)/2.0d0
+        !Solve model
+        call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)
+        if (av_VSL(2)>VSL_data) then
+            b_bar_max=b_bar(1)
+        else
+            b_bar_min=b_bar(1)
+        end if
+        it=it+1
+        print*,it,b_bar(1),av_VSL(1),av_VSL(2)   
+    end do
     
     open(unit=9,file='b_bar_cost.txt')
         write(9,*)  b_bar
     close(9)
+
     
-    !!Solve model for different cohorts
+    !Solve model for different cohorts
     av_V_ini_all=0.0d0
     av_V_ini_all(:,:,:,reference_cohort)=av_V_ini
-    
-    !do c_l=2,G_cohorts-1,2
-    !    reference_cohort=c_l
-    !    call load_income_risk() !college premium
-    !    call load_medical_expenses() !adjust tuition
-    !    call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)
-    !    av_V_ini_all(:,:,:,c_l)=av_V_ini
-    !    print*,it,b_bar(1),av_VSL(1),av_VSL(2) 
-    !end do
-    !reference_cohort=2
-    
+    do c_l=2,G_cohorts-1,2
+        reference_cohort=c_l
+        call load_income_risk() !college premium
+        call load_medical_expenses() !adjust tuition
+        call solve_and_simulate_model(asset_distribution,av_VSL,av_V_ini,p50_delta)
+        av_V_ini_all(:,:,:,c_l)=av_V_ini
+        print*,it,b_bar(1),av_VSL(1),av_VSL(2) 
+    end do
+    reference_cohort=2
     
     open(unit=9,file='v_ini.txt')
-        read(9,*) av_V_ini_all 
+        write(9,*) av_V_ini_all 
     close(9)
-
-
     
     do c_l=1,G_cohorts;do df_l=1,G_DF;do e_l=1,G_educ;do y_l=1,types
         if (df_l==1) then
@@ -138,11 +141,11 @@ subroutine calibrate_b_bar()
 
     !Estimate costs:
     !!!!!!!!!!!!!!!!    
-    
-    p_g(1,1:3)=(/log(14.5d0),log(10.95d0),log(30.8d0)/) !av cost of protective, High-school, College   1M(/log(6.42d0),log(6.0d0),log(24.6d0)/)
-    p_g(1,4:6)=(/13.4d0,2.08d0,4.31d0/) !scale of shocks
-    p_g(1,4:6)=log(p_g(1,4:6))
-
+    !(df_l,e_l,y_l,c_l)
+    p_g(1,1:2)=(/4.53d0,6.55d0 /)!mean taste shock for protective and education 
+    p_g(1,3)=log(5.17d0) !multiplicative factor to the cost of college 
+    p_g(1,4:5)=(/log(3.3d0),log(30.69d0)/) !variance of taste shock of protective and education
+    !p_g(1,6)=inverse_logistic_mapping(0.1d0, -1.0d0, 1.0d0) 
     it=0
 
 1    do p_l=1,PAR_2+1
@@ -205,18 +208,23 @@ function obj_function_costs(parameters)
     real(DP),dimension(G_df,G_educ,G_types)::rand_ey,U
     integer,dimension(3)::maxloc_U
     real(DP)::obj_function_costs
-    real(DP),dimension(2)::gumbel_y,gumbel_hs,gumbel_cg
-    real(DP)::rho_cghs
+    real(DP)::mu_y,mu_e,var_y,var_e,tau_cg,var_nu
+    real(DP)::rho_ey
     real(DP),dimension(G_df,G_educ,G_types)::cost_ey
     integer:: e_l,y_l,df_l,i_l,c_l
     integer(8),dimension(1)::seed=321
     interface
-        subroutine input2p(parameters,cost_ey,gumbel_y,gumbel_hs,gumbel_cg)
+        subroutine input2p(parameters,mu_y,mu_e,var_y,var_e,tau_cg,var_nu,rho_ey)
             use nrtype; use state_space_dim
             implicit none
             real(DP),dimension(:),intent(in)::parameters
-            real(DP),dimension(G_df,G_educ,G_types),intent(out)::cost_ey
-            real(DP),dimension(2),intent(out)::gumbel_y,gumbel_hs,gumbel_cg
+            real(DP),intent(out)::mu_y,mu_e,var_y,var_e,tau_cg,var_nu,rho_ey
+        end subroutine
+        subroutine direct_effect(p_in,V_in,V_out)
+            use nrtype; use preference_p
+            implicit none
+            real(DP),dimension(:),intent(in)::p_in
+            real(DP),dimension(G_df,G_educ,G_types),intent(in)::V_in,V_out
         end subroutine
     end interface
     
@@ -226,12 +234,12 @@ function obj_function_costs(parameters)
     call random_seed(PUT=seed)
     joint_pr_model=0.0d0
     !open(unit=9,file='eps.txt')
-    call input2p(parameters,cost_ey,gumbel_y,gumbel_hs,gumbel_cg)
-    print '(A20,<10>F10.2)','parameters P',cost_ey(1,1,1),cost_ey(1,2,2),cost_ey(1,3,2),gumbel_y,gumbel_hs,gumbel_cg
+    call input2p(parameters,mu_y,mu_e,var_y,var_e,tau_cg,var_nu,rho_ey)
+    print '(A20,<10>F10.2)','parameters P',mu_y,mu_e,tau_cg,var_y,var_e,var_nu,rho_ey
     do c_l=2,G_cohorts-1,2
         do i_l=1,200000
-        call p2shock(gumbel_y,gumbel_hs,gumbel_cg,rand_ey)
-        U=av_V_ini_all(:,:,:,c_l)-cost_ey+rand_ey 
+        call p2shock(mu_y,mu_e,var_y,var_e,tau_cg,var_nu,rho_ey,rand_ey)
+        U=av_V_ini_all(:,:,:,c_l)-rand_ey 
         maxloc_U=maxloc(U)
         joint_pr_model(maxloc_U(1),maxloc_U(2),maxloc_U(3),c_l)=joint_pr_model(maxloc_U(1),maxloc_U(2),maxloc_U(3),c_l)+1.0d0 
         !if (maxloc_U(2)==3) then
@@ -263,7 +271,11 @@ function obj_function_costs(parameters)
     
     !Match pr(y=1|e)
     do df_l=1,G_df;do e_l=1,G_educ;do c_l=2,G_cohorts-1,2
-        obj_function_costs=obj_function_costs+((joint_pr_model(df_l,e_l,1,c_l)/sum(joint_pr_model(df_l,e_l,:,c_l))-joint_pr(df_l,e_l,1,c_l)/sum(joint_pr(df_l,e_l,:,c_l)))/(joint_pr(df_l,e_l,1,c_l)/sum(joint_pr(df_l,e_l,:,c_l))))**2.0d0
+        !if (e_l==3 .or. e_l==1) then
+        !    obj_function_costs=obj_function_costs+((joint_pr_model(df_l,e_l,1,c_l)/sum(joint_pr_model(df_l,e_l,:,c_l))-joint_pr(df_l,e_l,1,c_l)/sum(joint_pr(df_l,e_l,:,c_l)))/(joint_pr(df_l,e_l,1,c_l)/sum(joint_pr(df_l,e_l,:,c_l))))**2.0d0*100.0d0
+        !else
+            obj_function_costs=obj_function_costs+((joint_pr_model(df_l,e_l,1,c_l)/sum(joint_pr_model(df_l,e_l,:,c_l))-joint_pr(df_l,e_l,1,c_l)/sum(joint_pr(df_l,e_l,:,c_l)))/(joint_pr(df_l,e_l,1,c_l)/sum(joint_pr(df_l,e_l,:,c_l))))**2.0d0
+        !end if
     end do;end do;end do
     
     !Match pr(e)
@@ -288,39 +300,37 @@ function obj_function_costs(parameters)
     open(unit=9,file='parameters_first_stage_prem.txt')
         write(9,*) parameters
     close(9)
+    
+    !call direct_effect(parameters,av_V_ini_all(:,:,:,2),av_V_ini_all(:,:,:,4))
 
     
     end function
     
-    subroutine input2p(parameters,cost_ey,gumbel_y,gumbel_hs,gumbel_cg)
+    subroutine input2p(parameters,mu_y,mu_e,var_y,var_e,tau_cg,var_nu,rho_ey)
         use nrtype; use state_space_dim
         implicit none
         real(DP),dimension(:),intent(in)::parameters
-        real(DP),dimension(G_df,G_educ,G_types),intent(out)::cost_ey
-        real(DP),dimension(2),intent(out)::gumbel_y,gumbel_hs,gumbel_cg
-        real(DP),dimension(G_educ)::cost_e    
-        real(DP),dimension(G_types)::cost_y
-        integer:: y_l,e_l,df_l
+        real(DP),intent(out)::mu_y,mu_e,var_y,var_e,tau_cg,var_nu,rho_ey
+        interface
+            function logistic_mapping(beta, beta_min, beta_max) result(mapped_value)
+            use nrtype
+            implicit none
+                real(DP), intent(in) :: beta
+                real(DP), intent(in) ::beta_min, beta_max
+                real(DP) :: mapped_value
+                real(DP):: sigmoid_beta
+            end function logistic_mapping
+        end interface
     
-        cost_y(G_types)=0.0d0
-        cost_y(1)=exp(parameters(1))
-        cost_e(1)=0.0d0
-        cost_e(2)=exp(parameters(2))
-        cost_e(3)=exp(parameters(3))
+        mu_y=parameters(1)
+        mu_e=parameters(2)
+        tau_cg=exp(parameters(3))
     
         !Location
-        gumbel_y(1)=0.0d0
-        gumbel_hs(1)=0.0d0
-        gumbel_cg(1)=0.0d0
-        
-        !Scale
-        gumbel_y(2)=exp(parameters(4))
-        gumbel_hs(2)=exp(parameters(5))
-        gumbel_cg(2)=exp(parameters(6))
-    
-        do df_l=1,G_df;do e_l=1,G_educ;do y_l=1,G_types
-            cost_ey(df_l,e_l,y_l)=cost_e(e_l)+cost_y(y_l)
-         end do;end do; end do
+        var_y=exp(parameters(4))
+        var_e=exp(parameters(5))
+        var_nu=0.0d0
+        rho_ey=0.0d0!logistic_mapping(parameters(6), -1.0d0, 1.0d0)
         
     
     end subroutine

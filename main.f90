@@ -60,6 +60,7 @@ program main
     !Decompositions
     call cross_sectional_dim()
     !call time_series_dim()
+    
 
     
     
@@ -179,21 +180,21 @@ end function
     function logistic_mapping(beta, beta_min, beta_max) result(mapped_value)
     use nrtype; use state_space_dim
     implicit none
-        real(DP),dimension(G_DF), intent(in) :: beta
+        real(DP), intent(in) :: beta
         real(DP), intent(in) ::beta_min, beta_max
-        real(DP),dimension(G_DF) :: mapped_value
-        real(DP),dimension(G_DF) :: sigmoid_beta
+        real(DP) :: mapped_value
+        real(DP) :: sigmoid_beta
 
         sigmoid_beta = 1.00d0/ (1.0d0 + exp(-beta))
         mapped_value = beta_min + (beta_max - beta_min) * sigmoid_beta
     end function logistic_mapping
 
     function inverse_logistic_mapping(x, beta_min, beta_max) result(inverse_mapped_value)
-    use nrtype; use state_space_dim
+    use nrtype
     implicit none
         real(DP), intent(in) ::beta_min, beta_max
-        real(DP),dimension(G_DF), intent(in) :: x
-        real(DP),dimension(G_DF) :: inverse_mapped_value
+        real(DP), intent(in) :: x
+        real(DP):: inverse_mapped_value
 
         inverse_mapped_value = -log((beta_max - x) / (x - beta_min))
     end function inverse_logistic_mapping
